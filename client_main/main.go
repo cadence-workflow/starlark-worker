@@ -112,7 +112,7 @@ func __run__(_args []string) {
 	fs.StringVar(&args, "args", "[]", "Function's positional arguments. Format: JSON array. Example: '[\"foo\", 100, true]'")
 	fs.StringVar(&kwargs, "kwargs", "[]", "Function's keyword arguments.Format: JSON array or arrays. Example: [[\"country_code\", \"US\"], [\"item_id\", 101]]")
 	fs.Var(&env, "env", "Environment variables to be set for the run")
-	fs.StringVar(&cadenceURL, "cadence-url", getEnv("CADENCE_URL", "grpc://127.0.0.1:7833/cadence-frontend/default/default"), "")
+	fs.StringVar(&cadenceURL, "cadence-url", getEnv("CADENCE_URL", "grpc://localhost:7833/cadence-frontend/default/default"), "")
 
 	if err := fs.Parse(_args); err != nil {
 		log.Fatal(err)

@@ -14,7 +14,7 @@ func (r *_Options) BindFlags(fs *flag.FlagSet) {
 	fs.StringVar(
 		&r.CadenceURL,
 		"cadence-url",
-		"grpc://127.0.0.1:7833",
+		"grpc://localhost:7833",
 		"Cadence connection URL",
 	)
 	fs.StringVar(
