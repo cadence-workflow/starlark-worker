@@ -14,7 +14,6 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"log"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -103,7 +102,7 @@ func __run__(_args []string) {
 
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 
-	var _package, file, function, args, kwargs, cadenceURL string
+	var _package, file, function, args, kwargs, cadenceEndpoint, domain, tasklist string
 	var env StringSliceValue
 
 	fs.StringVar(&_package, "package", ".", "Package path. Package is a *.tar.gz file used to aggregate *.star files and associated resources into one file for distribution. There are 3 ways to specify the package: 1) file path (reads package directly from the file); 2) directory path (builds package from the directory); 3) - (single hyphen, reads package from stdin)")
@@ -112,7 +111,9 @@ func __run__(_args []string) {
 	fs.StringVar(&args, "args", "[]", "Function's positional arguments. Format: JSON array. Example: '[\"foo\", 100, true]'")
 	fs.StringVar(&kwargs, "kwargs", "[]", "Function's keyword arguments.Format: JSON array or arrays. Example: [[\"country_code\", \"US\"], [\"item_id\", 101]]")
 	fs.Var(&env, "env", "Environment variables to be set for the run")
-	fs.StringVar(&cadenceURL, "cadence-url", getEnv("CADENCE_URL", "grpc://localhost:7833/cadence-frontend/default/default"), "")
+	fs.StringVar(&cadenceEndpoint, "cadence-url", "grpc://localhost:7833", "")
+	fs.StringVar(&domain, "domain", "default", "")
+	fs.StringVar(&tasklist, "tasklist", "default", "")
 
 	if err := fs.Parse(_args); err != nil {
 		log.Fatal(err)
@@ -197,12 +198,7 @@ func __run__(_args []string) {
 		log.Printf("keyword[%s]: %T: %s", arg[0].String(), arg[1], arg[1].String())
 	}
 
-	var cadenceHost, cadenceService, cadenceDomain, cadenceTaskList string
-	if err := parseCadenceURL(cadenceURL, &cadenceHost, &cadenceService, &cadenceDomain, &cadenceTaskList); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Cadence client: %s, service: %s, domain: %s", cadenceURL, cadenceService, cadenceDomain)
+	log.Printf("Cadence endpoint: %s, domain: %s, tasklist: %s", cadenceEndpoint, domain, tasklist)
 
 	z := zap.NewDevelopmentConfig()
 	z.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
@@ -211,41 +207,16 @@ func __run__(_args []string) {
 		log.Fatal(err)
 	}
 
-	cadenceInterface := cad.NewInterface(cadenceHost, cadenceService)
-
-	cadenceCli := cadenceclient.NewClient(cadenceInterface, cadenceDomain, &cadenceclient.Options{
+	cadenceInterface := cad.NewInterface(cadenceEndpoint)
+	cadenceCli := cadenceclient.NewClient(cadenceInterface, domain, &cadenceclient.Options{
 		MetricsScope: tally.NoopScope,
 		DataConverter: &cadstar.DataConverter{
 			Logger: logger,
 		},
 	})
 
-	log.Printf("Function: %s", function)
-	log.Printf("Cadence TaskList: %s", cadenceTaskList)
-	if err := client.Run(_tar, file, function, argsP, kwargsP, _env, cadenceCli, cadenceTaskList); err != nil {
+	log.Printf("Entrypoint function: %s", function)
+	if err := client.Run(_tar, file, function, argsP, kwargsP, _env, cadenceCli, tasklist); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func parseCadenceURL(v string, host, service, domain, taskList *string) error {
-	u, err := url.Parse(v)
-	if err != nil {
-		return err
-	}
-	*host = u.Scheme + "://" + u.Host
-	path := strings.Split(u.Path, "/")
-	if len(path) != 4 || path[0] != "" {
-		return fmt.Errorf("invalid cadence url: %s; expected format: {scheme}://{host}/{service}/{domain}/{taskList}", v)
-	}
-	*service = path[1]
-	*domain = path[2]
-	*taskList = path[3]
-	return nil
-}
-
-func getEnv(key, _default string) string {
-	if v, ok := os.LookupEnv(key); ok {
-		return v
-	}
-	return _default
 }

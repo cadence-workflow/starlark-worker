@@ -10,8 +10,7 @@ import (
 	"net/url"
 )
 
-func NewInterface(location string, service string) workflowserviceclient.Interface {
-
+func NewInterface(location string) workflowserviceclient.Interface {
 	loc, err := url.Parse(location)
 	if err != nil {
 		log.Fatalln(err)
@@ -30,6 +29,8 @@ func NewInterface(location string, service string) workflowserviceclient.Interfa
 	default:
 		log.Fatalf("unsupported scheme: %s", loc.Scheme)
 	}
+
+	service := "cadence-frontend"
 	dispatcher := yarpc.NewDispatcher(yarpc.Config{
 		Name: service,
 		Outbounds: yarpc.Outbounds{
