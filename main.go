@@ -44,7 +44,7 @@ func main() {
 
 	logger.Info("Options", zap.Any("Options", opt))
 
-	cadInterface := cad.NewInterface(opt.CadenceURL, opt.CadenceService)
+	cadInterface := cad.NewInterface(opt.CadenceURL)
 
 	cadWorker := worker.New(
 		cadInterface,

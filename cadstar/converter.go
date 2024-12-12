@@ -79,6 +79,8 @@ func (s *DataConverter) FromData(data []byte, to ...any) error {
 			line = line[:ll-1]
 		}
 		out := to[i]
+
+		// First try to decode the value using Starlark decoder, and if it fails, fall back to JSON decoder.
 		err = star.Decode(line, out)
 		if _, ok := err.(star.UnsupportedTypeError); ok {
 			err = jsoniter.Unmarshal(line, out)

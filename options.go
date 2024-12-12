@@ -4,7 +4,6 @@ import "flag"
 
 type _Options struct {
 	CadenceURL      string
-	CadenceService  string
 	CadenceDomain   string
 	CadenceTaskList string
 	ClientTaskList  string
@@ -17,12 +16,7 @@ func (r *_Options) BindFlags(fs *flag.FlagSet) {
 		"grpc://localhost:7833",
 		"Cadence connection URL",
 	)
-	fs.StringVar(
-		&r.CadenceService,
-		"cadence-service",
-		"cadence-frontend",
-		"Cadence YARPC service name",
-	)
+
 	fs.StringVar(
 		&r.CadenceDomain,
 		"cadence-domain",
