@@ -25,5 +25,10 @@ This section is intended for contributors. Below are the instructions for settin
    go run ./client_main run --file ./testdata/ping.star
    ```
 
+   Or try another test workflow which accepts custom input:
+   ```sh
+   go run ./client_main run --file ./testdata/concurrent_hello.star --function wf --args "[5, 1]"
+   ```
+
 5. **Modify and re-run the test workflow**:
    Make changes to the [testdata/ping.star](./testdata/ping.star) file and run the workflow again. The changes will take effect immediately without needing to restart the worker.
