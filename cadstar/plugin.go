@@ -14,6 +14,8 @@ type RunInfo struct {
 
 // IPlugin plugin factory interface
 type IPlugin interface {
+	// ID returns unique plugin identifier
+	ID() string
 	// Create instantiates starlark.StringDict that exposes plugin's functions and properties
 	Create(info RunInfo) starlark.StringDict
 	// Register registers Cadence activities if any used by the plugin.

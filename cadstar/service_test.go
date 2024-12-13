@@ -13,6 +13,10 @@ import (
 
 type TestPlugin struct{}
 
+func (t *TestPlugin) ID() string {
+	return "testplugin"
+}
+
 func (t *TestPlugin) Create(_ RunInfo) starlark.StringDict {
 	return starlark.StringDict{
 		"stringify_activity": starlark.NewBuiltin("stringify_activity", func(th *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
@@ -51,9 +55,10 @@ func TestSuite(t *testing.T) { suite.Run(t, new(Test)) }
 func (r *Test) SetupSuite() {}
 
 func (r *Test) SetupTest() {
+	tp := &TestPlugin{}
 	r.env = r.NewEnvironment(r.T(), &StarTestEnvironmentParams{
 		RootDirectory: "testdata",
-		Plugins:       []IPlugin{&TestPlugin{}},
+		Plugins:       map[string]IPlugin{tp.ID(): tp},
 	})
 }
 
