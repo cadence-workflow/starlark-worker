@@ -30,19 +30,20 @@ func (f *Module) Sleep(t *starlark.Thread, seconds starlark.Value) error {
 	ctx := cadstar.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
-	var sf starlark.Float
+	var sf float64
 	switch arg0 := seconds.(type) {
 	case starlark.Int:
-		sf = arg0.Float()
+		sf = float64(arg0.Float())
 	case starlark.Float:
-		sf = arg0
+		sf = float64(arg0)
 	default:
 		code := "bad-request"
 		details := fmt.Sprintf("bad argument type: %T: %v", seconds, seconds)
 		logger.Error(code, zap.String("details", details))
 		return cadence.NewCustomError(code, details)
 	}
-	return workflow.Sleep(ctx, time.Second*time.Duration(sf))
+
+	return workflow.Sleep(ctx, time.Duration(float64(time.Second)*sf))
 }
 
 var builtins = map[string]*starlark.Builtin{

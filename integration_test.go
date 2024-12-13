@@ -48,7 +48,6 @@ func (r *Suite) TearDownSuite() {
 }
 
 func (r *Suite) TestAll() {
-
 	var testFiles []string
 	err := filepath.WalkDir("testdata", func(entryPath string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -69,7 +68,6 @@ func (r *Suite) TestAll() {
 }
 
 func (r *Suite) TestAtExit() {
-
 	// clean up test server resources if any
 	resources := r.httpHandler.GetResources()
 	for k := range resources {

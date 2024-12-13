@@ -9,6 +9,7 @@ import (
 	"github.com/cadence-workflow/starlark-worker/plugin/json"
 	"github.com/cadence-workflow/starlark-worker/plugin/os"
 	"github.com/cadence-workflow/starlark-worker/plugin/progress"
+	"github.com/cadence-workflow/starlark-worker/plugin/random"
 	"github.com/cadence-workflow/starlark-worker/plugin/request"
 	"github.com/cadence-workflow/starlark-worker/plugin/test"
 	"github.com/cadence-workflow/starlark-worker/plugin/time"
@@ -27,4 +28,5 @@ var Registry = []cadstar.IPlugin{
 	atexit.Plugin,
 	progress.Plugin,
 	hashlib.Plugin,
+	random.Plugin,
 }
