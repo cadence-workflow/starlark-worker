@@ -145,15 +145,9 @@ func (r *Service) Run(
 		Environ: environ,
 	}
 
-	funcsAndProps := starlark.StringDict{}
-	for _, p := range r.Plugins {
-		for k, v := range p.Create(runInfo) {
-			if _, ok := funcsAndProps[k]; ok {
-				return nil, fmt.Errorf("function or property key %q already exists in another plugin", k)
-			}
-
-			funcsAndProps[k] = v
-		}
+	plugins := starlark.StringDict{}
+	for pID, p := range r.Plugins {
+		plugins[pID] = p.Create(runInfo)
 	}
 
 	if err := workflow.SetQueryHandler(ctx, "logs", func() (any, error) {
@@ -184,7 +178,7 @@ func (r *Service) Run(
 
 	t := CreateThread(ctx, nil)
 	defer t.Finish()
-	t.Native.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": funcsAndProps})
+	t.Native.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugins})
 
 	// Run main user code
 	if res, err = star.Call(t.Native, path, function, args, kwargs); err != nil {

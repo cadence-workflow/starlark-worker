@@ -16,12 +16,13 @@ type RunInfo struct {
 type IPlugin interface {
 	// ID returns unique plugin identifier
 	ID() string
-	// Create instantiates starlark.StringDict that exposes plugin's functions and properties
-	Create(info RunInfo) starlark.StringDict
+	// Create returns a starlark.Value containing plugin's functions and properties.
+	// It will be exposed to starlark scripts under the plugin's ID.
+	// e.g. ID = random, the plugin will be accessible as random.randint()
+	Create(info RunInfo) starlark.Value
 	// Register registers Cadence activities if any used by the plugin.
 	// Deprecated: Cadence activities have different lifecycle, register them separately, outside the plugin's code.
 	Register(registry worker.Registry)
-
 	// LocalStorageKeys returns a list of keys that plugin uses to store data in the local storage.
 	// The keys must be unique so prefixing them with plugin name is recommended. e.g. "plugin_name.key"
 	// The local storage is shared between all plugins.

@@ -18,8 +18,8 @@ func (r *plugin) ID() string {
 	return pluginID
 }
 
-func (r *plugin) Create(info cadstar.RunInfo) starlark.StringDict {
-	return starlark.StringDict{pluginID: &Module{info: info.Info}}
+func (r *plugin) Create(info cadstar.RunInfo) starlark.Value {
+	return &Module{info: info.Info}
 }
 
 func (r *plugin) Register(registry worker.Registry) {}
