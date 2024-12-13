@@ -46,12 +46,32 @@ func randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 		return nil, err
 	}
 
-	v := rand.Intn(max-min+1) + min
+	var v int
+	err := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
+		return rand.Intn(max-min+1) + min
+	}).Get(&v)
+	if err != nil {
+		logger.Error("get side effect for randIntFn failed", zap.Error(err))
+		return nil, err
+	}
+
 	return starlark.MakeInt(v), nil
 }
 
 // randFn generates a random float number between 0 and 1
 // Return: The generated random number
 func randFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	return starlark.Float(rand.Float64()), nil
+	ctx := cadstar.GetContext(t)
+	logger := workflow.GetLogger(ctx)
+
+	var v float64
+	err := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
+		return rand.Float64()
+	}).Get(&v)
+	if err != nil {
+		logger.Error("get side effect for randIntFn failed", zap.Error(err))
+		return nil, err
+	}
+
+	return starlark.Float(v), nil
 }
