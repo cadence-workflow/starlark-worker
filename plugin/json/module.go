@@ -14,8 +14,8 @@ type Module struct{}
 
 var _ starlark.HasAttrs = &Module{}
 
-func (f *Module) String() string                        { return "json" }
-func (f *Module) Type() string                          { return "json" }
+func (f *Module) String() string                        { return pluginID }
+func (f *Module) Type() string                          { return pluginID }
 func (f *Module) Freeze()                               {}
 func (f *Module) Truth() starlark.Bool                  { return true }
 func (f *Module) Hash() (uint32, error)                 { return 0, fmt.Errorf("no-hash") }

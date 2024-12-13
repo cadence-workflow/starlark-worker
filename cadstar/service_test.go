@@ -30,6 +30,8 @@ func (t *TestPlugin) Register(registry worker.Registry) {
 	registry.RegisterActivity(t.stringifyActivity)
 }
 
+func (t *TestPlugin) SharedLocalStorageKeys() []string { return nil }
+
 func (t *TestPlugin) stringifyActivity(ctx context.Context, args starlark.Tuple) (starlark.String, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("stringify_activity", zap.String("args", args.String()))

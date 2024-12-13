@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+const pluginID = "request"
+
 var Plugin = &plugin{}
 
 type plugin struct{}
@@ -14,7 +16,7 @@ type plugin struct{}
 var _ cadstar.IPlugin = (*plugin)(nil)
 
 func (r *plugin) Create(_ cadstar.RunInfo) starlark.StringDict {
-	return starlark.StringDict{"request": &Module{}}
+	return starlark.StringDict{pluginID: &Module{}}
 }
 
 func (r *plugin) Register(registry worker.Registry) {
@@ -22,3 +24,5 @@ func (r *plugin) Register(registry worker.Registry) {
 		client: http.DefaultClient,
 	})
 }
+
+func (r *plugin) SharedLocalStorageKeys() []string { return nil }

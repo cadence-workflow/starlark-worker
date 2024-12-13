@@ -8,13 +8,7 @@ import (
 )
 
 func TestPluginFactory(t *testing.T) {
-	// Prepare a mock RunInfo
-	runInfo := cadstar.RunInfo{
-		// You can mock or leave empty the fields required for testing
-	}
-
-	// Call the Plugin factory function
-	stringDict := Plugin(runInfo)
+	stringDict := Plugin.Create(cadstar.RunInfo{})
 
 	// Use require to validate the results
 	require.NotNil(t, stringDict, "StringDict should not be nil")

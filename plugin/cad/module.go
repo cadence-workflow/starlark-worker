@@ -18,8 +18,8 @@ type Module struct {
 
 var _ starlark.HasAttrs = &Module{}
 
-func (r *Module) String() string                        { return "cadence" }
-func (r *Module) Type() string                          { return "cadence" }
+func (r *Module) String() string                        { return pluginID }
+func (r *Module) Type() string                          { return pluginID }
 func (r *Module) Freeze()                               {}
 func (r *Module) Truth() starlark.Bool                  { return true }
 func (r *Module) Hash() (uint32, error)                 { return 0, fmt.Errorf("no-hash") }

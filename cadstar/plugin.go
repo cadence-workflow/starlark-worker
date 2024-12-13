@@ -19,17 +19,9 @@ type IPlugin interface {
 	// Register registers Cadence activities if any used by the plugin.
 	// Deprecated: Cadence activities have different lifecycle, register them separately, outside the plugin's code.
 	Register(registry worker.Registry)
+
+	// LocalStorageKeys returns a list of keys that plugin uses to store data in the local storage.
+	// The keys must be unique so prefixing them with plugin name is recommended. e.g. "plugin_name.key"
+	// The local storage is shared between all plugins.
+	SharedLocalStorageKeys() []string
 }
-
-// PluginFactory is a functional IPlugin implementation
-type PluginFactory func(info RunInfo) starlark.StringDict
-
-var _ IPlugin = (PluginFactory)(nil)
-
-func (r PluginFactory) Create(info RunInfo) starlark.StringDict {
-	return r(info)
-}
-
-// Register does nothing.
-// Deprecated: Cadence activities have different lifecycle, register them separately, outside the plugin's code.
-func (r PluginFactory) Register(_ worker.Registry) {}

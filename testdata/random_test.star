@@ -3,6 +3,7 @@ load("@plugin", "random", t = "test")
 def test_run():
     test_randint()
     test_random()
+    test_seed()
 
 def test_randint():
     # Generate 10000 random numbers from 1 to 10,
@@ -36,3 +37,10 @@ def test_random():
     tolerance = 0.1
 
     t.true(abs(got_avg - expected_avg) < tolerance, "expected average to be in [%d, %d] range but found %d" % (expected_avg-tolerance, expected_avg+tolerance, got_avg))
+
+
+def test_seed():
+    # Seed it with a known value and validate the next random number generated is the expected one
+    random.seed(1234)
+    t.equal(random.randint(0, 100), 18)
+    t.equal(random.randint(0, 100), 31)
