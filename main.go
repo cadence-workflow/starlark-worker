@@ -62,6 +62,18 @@ func main() {
 		},
 	)
 
+	// validate uniqueness of storage keys across plugins. key is storage key, value is plugin ID
+	uniqueKeys := make(map[string]string)
+	for pID, p := range plugin.Registry {
+		for _, key := range p.SharedLocalStorageKeys() {
+			if _, ok := uniqueKeys[key]; ok {
+				logger.Sugar().Fatalf("Storage key %s is not unique. Plugin %s and %s share the same key.", key, uniqueKeys[key], pID)
+			}
+
+			uniqueKeys[key] = pID
+		}
+	}
+
 	service := &cadstar.Service{
 		Plugins:        plugin.Registry,
 		ClientTaskList: opt.ClientTaskList,
@@ -73,12 +85,10 @@ func main() {
 	}
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	logger.Info("Server started. Press CTRL+C to exit.")
 
-	select {
-	case <-sig:
-		cadWorker.Stop()
-	}
+	<-sig
+	cadWorker.Stop()
 	logger.Info("EXIT.")
 }

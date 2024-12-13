@@ -15,6 +15,10 @@ type plugin struct{}
 
 var _ cadstar.IPlugin = (*plugin)(nil)
 
+func (r *plugin) ID() string {
+	return pluginID
+}
+
 func (r *plugin) Create(_ cadstar.RunInfo) starlark.StringDict {
 	return starlark.StringDict{pluginID: &Module{}}
 }

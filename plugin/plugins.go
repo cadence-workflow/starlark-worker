@@ -16,17 +16,17 @@ import (
 	"github.com/cadence-workflow/starlark-worker/plugin/uuid"
 )
 
-var Registry = []cadstar.IPlugin{
-	cad.Plugin,
-	request.Plugin,
-	time.Plugin,
-	test.Plugin,
-	os.Plugin,
-	json.Plugin,
-	uuid.Plugin,
-	concurrent.Plugin,
-	atexit.Plugin,
-	progress.Plugin,
-	hashlib.Plugin,
-	random.Plugin,
+var Registry = map[string]cadstar.IPlugin{
+	cad.Plugin.ID():        cad.Plugin,
+	request.Plugin.ID():    request.Plugin,
+	time.Plugin.ID():       time.Plugin,
+	test.Plugin.ID():       test.Plugin,
+	os.Plugin.ID():         os.Plugin,
+	json.Plugin.ID():       json.Plugin,
+	uuid.Plugin.ID():       uuid.Plugin,
+	concurrent.Plugin.ID(): concurrent.Plugin,
+	atexit.Plugin.ID():     atexit.Plugin,
+	progress.Plugin.ID():   progress.Plugin,
+	hashlib.Plugin.ID():    hashlib.Plugin,
+	random.Plugin.ID():     random.Plugin,
 }

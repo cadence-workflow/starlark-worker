@@ -37,7 +37,7 @@ type _Globals struct {
 	logs       *list.List
 	environ    *starlark.Dict
 	progress   *list.List
-	plugins    []IPlugin
+	plugins    map[string]IPlugin
 }
 
 func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
@@ -52,7 +52,7 @@ func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
 }
 
 type Service struct {
-	Plugins        []IPlugin
+	Plugins        map[string]IPlugin
 	ClientTaskList string
 }
 
@@ -145,10 +145,14 @@ func (r *Service) Run(
 		Environ: environ,
 	}
 
-	plugin := starlark.StringDict{}
+	funcsAndProps := starlark.StringDict{}
 	for _, p := range r.Plugins {
 		for k, v := range p.Create(runInfo) {
-			plugin[k] = v
+			if _, ok := funcsAndProps[k]; ok {
+				return nil, fmt.Errorf("function or property key %q already exists in another plugin", k)
+			}
+
+			funcsAndProps[k] = v
 		}
 	}
 
@@ -180,7 +184,7 @@ func (r *Service) Run(
 
 	t := CreateThread(ctx, nil)
 	defer t.Finish()
-	t.Native.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugin})
+	t.Native.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": funcsAndProps})
 
 	// Run main user code
 	if res, err = star.Call(t.Native, path, function, args, kwargs); err != nil {
