@@ -42,7 +42,7 @@ func uuid4(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs 
 	})
 	var stringUUID starlark.String
 	if err := _stringUUID.Get(&stringUUID); err != nil {
-		logger.Error("error", zap.Error(err))
+		logger.Error("get side effect for uuid4 failed", zap.Error(err))
 		return nil, err
 	}
 	return &UUID{StringUUID: stringUUID}, nil
