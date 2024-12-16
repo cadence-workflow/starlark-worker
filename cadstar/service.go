@@ -176,12 +176,11 @@ func (r *Service) Run(
 		return nil, err
 	}
 
-	t := CreateThread(ctx, nil)
-	defer t.Finish()
-	t.Native.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugins})
+	t := CreateThread(ctx)
+	t.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugins})
 
 	// Run main user code
-	if res, err = star.Call(t.Native, path, function, args, kwargs); err != nil {
+	if res, err = star.Call(t, path, function, args, kwargs); err != nil {
 		logger.Error("workflow-error", ext.ZapError(err)...)
 
 		var canceledError *cadence.CanceledError
@@ -192,7 +191,7 @@ func (r *Service) Run(
 	}
 
 	// Run exit hooks
-	if _err := globals.exitHooks.Run(t.Native); _err != nil {
+	if _err := globals.exitHooks.Run(t); _err != nil {
 		logger.Error("exit-hook-error", ext.ZapError(_err)...)
 		err = errors.Join(err, _err)
 	}

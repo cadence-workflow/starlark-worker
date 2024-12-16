@@ -5,38 +5,43 @@ import (
 	"math/rand"
 
 	"github.com/cadence-workflow/starlark-worker/cadstar"
-	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/ext"
 	"go.starlark.net/starlark"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 )
 
-type Module struct{}
+type Module struct {
+	attributes map[string]starlark.Value
+	rand       *rand.Rand
+}
+
+func NewModule() *Module {
+	m := &Module{}
+	m.attributes = map[string]starlark.Value{
+		"seed":    starlark.NewBuiltin("seed", m.seedFn).BindReceiver(m),
+		"randint": starlark.NewBuiltin("randint", m.randIntFn).BindReceiver(m),
+		"random":  starlark.NewBuiltin("random", m.randFn).BindReceiver(m),
+	}
+	return m
+}
 
 var _ starlark.HasAttrs = &Module{}
 
-func (f *Module) String() string                        { return pluginID }
-func (f *Module) Type() string                          { return pluginID }
-func (f *Module) Freeze()                               {}
-func (f *Module) Truth() starlark.Bool                  { return true }
-func (f *Module) Hash() (uint32, error)                 { return 0, fmt.Errorf("no-hash") }
-func (f *Module) Attr(n string) (starlark.Value, error) { return star.Attr(f, n, builtins, properties) }
-func (f *Module) AttrNames() []string                   { return star.AttrNames(builtins, properties) }
-
-var properties = map[string]star.PropertyFactory{}
-
-var builtins = map[string]*starlark.Builtin{
-	"seed":    starlark.NewBuiltin("seed", seedFn),
-	"randint": starlark.NewBuiltin("randint", randIntFn),
-	"random":  starlark.NewBuiltin("random", randFn),
-}
+func (m *Module) String() string                        { return pluginID }
+func (m *Module) Type() string                          { return pluginID }
+func (m *Module) Freeze()                               {}
+func (m *Module) Truth() starlark.Bool                  { return true }
+func (m *Module) Hash() (uint32, error)                 { return 0, fmt.Errorf("no-hash") }
+func (m *Module) Attr(n string) (starlark.Value, error) { return m.attributes[n], nil }
+func (m *Module) AttrNames() []string                   { return ext.SortedKeys(m.attributes) }
 
 // seedFn is used to seed the random number generator
 // Arguments:
 //   - seed: the seed value
 //
 // Return: None
-func seedFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func (m *Module) seedFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := cadstar.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
@@ -47,11 +52,7 @@ func seedFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwarg
 	}
 
 	// create a new random source with the seed
-	r := rand.New(rand.NewSource(int64(seed)))
-
-	// store it in thread local storage.
-	// If see was called before and a random source was stored in the thread local, it will be replaced
-	t.SetLocal(threadLocalSeededRandInstanceKey, r)
+	m.rand = rand.New(rand.NewSource(int64(seed)))
 
 	return starlark.None, nil
 }
@@ -62,7 +63,7 @@ func seedFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwarg
 //   - max: the maximum value of the random integer
 //
 // Return: The generated random integer
-func randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func (m *Module) randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := cadstar.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
@@ -74,9 +75,8 @@ func randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 
 	var v int
 	err := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
-		r, ok := t.Local(threadLocalSeededRandInstanceKey).(*rand.Rand)
-		if ok && r != nil { // seed was called before and a random source was stored in the thread local. Use it
-			return r.Intn(max-min+1) + min
+		if m.rand != nil { // seed was called before and a random source was created. Use it.
+			return m.rand.Intn(max-min+1) + min
 		}
 
 		// seed was not called before. Use the default random source
@@ -92,15 +92,14 @@ func randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 
 // randFn generates a random floating point number between 0 and 1
 // Return: The generated random number
-func randFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func (m *Module) randFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := cadstar.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
 	var v float64
 	err := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
-		r, ok := t.Local(threadLocalSeededRandInstanceKey).(*rand.Rand)
-		if ok && r != nil { // seed was called before and a random source was stored in the thread local. Use it
-			return r.Float64()
+		if m.rand != nil { // seed was called before and a random source was created. Use it
+			return m.rand.Float64()
 		}
 
 		// seed was not called before. Use the default random source

@@ -32,8 +32,6 @@ func (t *TestPlugin) Register(registry worker.Registry) {
 	registry.RegisterActivityWithOptions(stringifyActivity, activity.RegisterOptions{Name: "stringify_activity"})
 }
 
-func (t *TestPlugin) SharedLocalStorageKeys() []string { return nil }
-
 func stringifyActivityWrapper(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := GetContext(t)
 	var res starlark.String

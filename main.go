@@ -62,18 +62,6 @@ func main() {
 		},
 	)
 
-	// validate uniqueness of storage keys across plugins. key is storage key, value is plugin ID
-	uniqueKeys := make(map[string]string)
-	for pID, p := range plugin.Registry {
-		for _, key := range p.SharedLocalStorageKeys() {
-			if _, ok := uniqueKeys[key]; ok {
-				logger.Sugar().Fatalf("Storage key %s is not unique. Plugin %s and %s share the same key.", key, uniqueKeys[key], pID)
-			}
-
-			uniqueKeys[key] = pID
-		}
-	}
-
 	service := &cadstar.Service{
 		Plugins:        plugin.Registry,
 		ClientTaskList: opt.ClientTaskList,

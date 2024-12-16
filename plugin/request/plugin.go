@@ -28,5 +28,3 @@ func (r *plugin) Register(registry worker.Registry) {
 		client: http.DefaultClient,
 	})
 }
-
-func (r *plugin) SharedLocalStorageKeys() []string { return nil }

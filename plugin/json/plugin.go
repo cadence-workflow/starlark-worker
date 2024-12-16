@@ -23,5 +23,3 @@ func (r *plugin) Create(_ cadstar.RunInfo) starlark.Value {
 }
 
 func (r *plugin) Register(registry worker.Registry) {}
-
-func (r *plugin) SharedLocalStorageKeys() []string { return nil }

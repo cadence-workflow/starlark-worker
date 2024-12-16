@@ -33,9 +33,8 @@ func run(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []
 	fn := args[0]
 	args = args[1:]
 	workflow.Go(ctx, func(ctx workflow.Context) {
-		subT := cadstar.CreateThread(ctx, t)
-		defer subT.Finish()
-		settable.Set(starlark.Call(subT.Native, fn, args, kwargs))
+		subT := cadstar.CreateThread(ctx)
+		settable.Set(starlark.Call(subT, fn, args, kwargs))
 	})
 	return &cad.Future{Future: future}, nil
 }
