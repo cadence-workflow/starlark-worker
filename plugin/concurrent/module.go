@@ -1,13 +1,12 @@
-package uuid
+package concurrent
 
 import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/plugin/cad"
 	"github.com/cadence-workflow/starlark-worker/star"
-	_uuid "github.com/google/uuid"
 	"go.starlark.net/starlark"
 	"go.uber.org/cadence/workflow"
-	"go.uber.org/zap"
 )
 
 type Module struct{}
@@ -23,27 +22,19 @@ func (f *Module) Attr(n string) (starlark.Value, error) { return star.Attr(f, n,
 func (f *Module) AttrNames() []string                   { return star.AttrNames(builtins, properties) }
 
 var builtins = map[string]*starlark.Builtin{
-	"uuid4": starlark.NewBuiltin("uuid4", uuid4),
+	"run": starlark.NewBuiltin("run", run),
 }
 
 var properties = map[string]star.PropertyFactory{}
 
-func uuid4(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	ctx := cadstar.GetContext(t)
-	logger := workflow.GetLogger(ctx)
-
-	if err := starlark.UnpackArgs("uuid4", args, kwargs); err != nil {
-		logger.Error("error", zap.Error(err))
-		return nil, err
-	}
-
-	_stringUUID := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
-		return _uuid.New().String()
+func run(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var ctx = cadstar.GetContext(t)
+	future, settable := workflow.NewFuture(ctx)
+	fn := args[0]
+	args = args[1:]
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		subT := cadstar.CreateThread(ctx)
+		settable.Set(starlark.Call(subT, fn, args, kwargs))
 	})
-	var stringUUID starlark.String
-	if err := _stringUUID.Get(&stringUUID); err != nil {
-		logger.Error("get side effect for uuid4 failed", zap.Error(err))
-		return nil, err
-	}
-	return &UUID{StringUUID: stringUUID}, nil
+	return &cad.Future{Future: future}, nil
 }

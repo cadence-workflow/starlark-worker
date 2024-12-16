@@ -16,7 +16,6 @@ type TestStruct struct {
 
 // TestToData tests that the converter can encode Go and Starlark values into bytes.
 func TestToData(t *testing.T) {
-
 	converter := newTestConverter(t)
 
 	t.Run("encode-go-bytes", func(t *testing.T) {
@@ -53,7 +52,6 @@ func TestToData(t *testing.T) {
 
 // TestFromData tests that the converter can decode bytes into Go and Starlark values.
 func TestFromData(t *testing.T) {
-
 	converter := newTestConverter(t)
 
 	t.Run("decode-go-bytes", func(t *testing.T) {

@@ -73,12 +73,10 @@ func main() {
 	}
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGKILL)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	logger.Info("Server started. Press CTRL+C to exit.")
 
-	select {
-	case <-sig:
-		cadWorker.Stop()
-	}
+	<-sig
+	cadWorker.Stop()
 	logger.Info("EXIT.")
 }

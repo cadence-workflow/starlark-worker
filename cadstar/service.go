@@ -37,6 +37,7 @@ type _Globals struct {
 	logs       *list.List
 	environ    *starlark.Dict
 	progress   *list.List
+	plugins    map[string]IPlugin
 }
 
 func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
@@ -51,7 +52,7 @@ func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
 }
 
 type Service struct {
-	Plugins        []IPlugin
+	Plugins        map[string]IPlugin
 	ClientTaskList string
 }
 
@@ -107,6 +108,7 @@ func (r *Service) Run(
 		logs:       list.New(),
 		environ:    environ,
 		progress:   list.New(),
+		plugins:    r.Plugins,
 	}
 	ctx = workflow.WithValue(ctx, contextKeyGlobals, globals)
 
@@ -143,11 +145,9 @@ func (r *Service) Run(
 		Environ: environ,
 	}
 
-	plugin := starlark.StringDict{}
-	for _, p := range r.Plugins {
-		for k, v := range p.Create(runInfo) {
-			plugin[k] = v
-		}
+	plugins := starlark.StringDict{}
+	for pID, p := range r.Plugins {
+		plugins[pID] = p.Create(runInfo)
 	}
 
 	if err := workflow.SetQueryHandler(ctx, "logs", func() (any, error) {
@@ -177,7 +177,7 @@ func (r *Service) Run(
 	}
 
 	t := CreateThread(ctx)
-	t.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugin})
+	t.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugins})
 
 	// Run main user code
 	if res, err = star.Call(t, path, function, args, kwargs); err != nil {

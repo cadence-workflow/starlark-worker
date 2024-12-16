@@ -8,9 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
-const threadLocalContextKey string = "context"
-const envLogLen = starlark.String("STAR_CORE_LOG_LEN")
-const defaultLogLen = 1000
+const (
+	threadLocalContextKey = "context"
+	envLogLen             = starlark.String("STAR_CORE_LOG_LEN")
+	defaultLogLen         = 1000
+)
 
 func CreateThread(ctx workflow.Context) *starlark.Thread {
 	logger := workflow.GetLogger(ctx)

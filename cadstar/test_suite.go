@@ -96,7 +96,7 @@ type StarTestSuite struct {
 
 type StarTestEnvironmentParams struct {
 	RootDirectory string
-	Plugins       []IPlugin
+	Plugins       map[string]IPlugin
 }
 
 // NewEnvironment creates a new StarTestEnvironment - test environment for the Starlark functions.

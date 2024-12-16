@@ -17,7 +17,7 @@ func TestSuite(t *testing.T) { suite.Run(t, new(Test)) }
 func (r *Test) SetupTest() {
 	r.env = r.NewEnvironment(r.T(), &cadstar.StarTestEnvironmentParams{
 		RootDirectory: "testdata",
-		Plugins:       []cadstar.IPlugin{Plugin},
+		Plugins:       map[string]cadstar.IPlugin{Plugin.ID(): Plugin},
 	})
 }
 

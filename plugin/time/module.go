@@ -18,33 +18,13 @@ type Module struct{}
 
 var _ starlark.HasAttrs = &Module{}
 
-func (f *Module) String() string                        { return "time" }
-func (f *Module) Type() string                          { return "time" }
+func (f *Module) String() string                        { return pluginID }
+func (f *Module) Type() string                          { return pluginID }
 func (f *Module) Freeze()                               {}
 func (f *Module) Truth() starlark.Bool                  { return true }
 func (f *Module) Hash() (uint32, error)                 { return 0, fmt.Errorf("no-hash") }
 func (f *Module) Attr(n string) (starlark.Value, error) { return star.Attr(f, n, builtins, properties) }
 func (f *Module) AttrNames() []string                   { return star.AttrNames(builtins, properties) }
-
-func (f *Module) Sleep(t *starlark.Thread, seconds starlark.Value) error {
-	ctx := cadstar.GetContext(t)
-	logger := workflow.GetLogger(ctx)
-
-	var sf float64
-	switch arg0 := seconds.(type) {
-	case starlark.Int:
-		sf = float64(arg0.Float())
-	case starlark.Float:
-		sf = float64(arg0)
-	default:
-		code := "bad-request"
-		details := fmt.Sprintf("bad argument type: %T: %v", seconds, seconds)
-		logger.Error(code, zap.String("details", details))
-		return cadence.NewCustomError(code, details)
-	}
-
-	return workflow.Sleep(ctx, time.Duration(float64(time.Second)*sf))
-}
 
 var builtins = map[string]*starlark.Builtin{
 	"sleep":              starlark.NewBuiltin("sleep", _sleep),
@@ -62,7 +42,6 @@ var properties = map[string]star.PropertyFactory{}
 //
 // Returns: None
 func _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	r := fn.Receiver().(*Module)
 	ctx := cadstar.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
@@ -71,7 +50,21 @@ func _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwarg
 		logger.Error("builtin-error", ext.ZapError(err)...)
 		return nil, err
 	}
-	return starlark.None, r.Sleep(t, seconds)
+
+	var sf float64
+	switch arg0 := seconds.(type) {
+	case starlark.Int:
+		sf = float64(arg0.Float())
+	case starlark.Float:
+		sf = float64(arg0)
+	default:
+		code := "bad-request"
+		details := fmt.Sprintf("bad argument type: %T: %v", seconds, seconds)
+		logger.Error(code, zap.String("details", details))
+		return starlark.None, cadence.NewCustomError(code, details)
+	}
+
+	return starlark.None, workflow.Sleep(ctx, time.Duration(float64(time.Second)*sf))
 }
 
 // _time_ns is similar to _time but returns time as an integer number of nanoseconds since the epoch.

@@ -1,7 +1,7 @@
-load("@plugin", "stringify_activity")
+load("@plugin", "testplugin")
 
 def plus(a, b):
     return a + b
 
 def stringify(*args):
-    return stringify_activity(*args)
+    return testplugin.stringify_activity(*args)

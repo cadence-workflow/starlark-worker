@@ -13,23 +13,14 @@ type RunInfo struct {
 }
 
 // IPlugin plugin factory interface
+// Plugin instances are created on startup and are used to create starlark.Value instances per workflow execution
 type IPlugin interface {
-	// Create instantiates starlark.StringDict that exposes plugin's functions and properties
-	Create(info RunInfo) starlark.StringDict
+	// ID returns unique plugin identifier
+	ID() string
+	// Create returns a starlark.Value containing plugin's functions and properties.
+	// It will be exposed to starlark scripts under the plugin's ID.
+	// e.g. ID = random, the plugin will be accessible as random.randint()
+	Create(info RunInfo) starlark.Value
 	// Register registers Cadence activities if any used by the plugin.
-	// Deprecated: Cadence activities have different lifecycle, register them separately, outside the plugin's code.
 	Register(registry worker.Registry)
 }
-
-// PluginFactory is a functional IPlugin implementation
-type PluginFactory func(info RunInfo) starlark.StringDict
-
-var _ IPlugin = (PluginFactory)(nil)
-
-func (r PluginFactory) Create(info RunInfo) starlark.StringDict {
-	return r(info)
-}
-
-// Register does nothing.
-// Deprecated: Cadence activities have different lifecycle, register them separately, outside the plugin's code.
-func (r PluginFactory) Register(_ worker.Registry) {}

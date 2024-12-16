@@ -8,7 +8,6 @@ import (
 )
 
 func TestTrue(t *testing.T) {
-
 	var err error
 
 	d := &starlark.Dict{}
