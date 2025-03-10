@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/json-iterator/go v1.1.12
 	github.com/stretchr/testify v1.10.0
-	github.com/uber-go/tally v3.5.10+incompatible
+	github.com/uber-go/tally v3.5.8+incompatible
 	go.starlark.net v0.0.0-20241125201518-c05ff208a98f
 	go.uber.org/cadence v1.2.9
 	go.uber.org/multierr v1.11.0
