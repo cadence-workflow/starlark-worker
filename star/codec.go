@@ -142,10 +142,10 @@ func Decode(line []byte, out any) (err error) {
 	return nil
 }
 
-// codecDictReplacer replaces dictionaries with __codec__ key with an appropriate starlark object, such us Dataclass.
+// codecDictReplacer replaces special "codec dictionaries" with custom starlark objects, such us Dataclass.
 // See also: replaceDict
 func codecDictReplacer(dict *starlark.Dict) (starlark.Value, error) {
-	codec, found, err := dict.Delete(starlark.String("__codec__"))
+	codec, found, err := dict.Get(starlark.String("__codec__"))
 	if err != nil {
 		return nil, err
 	}
@@ -153,14 +153,14 @@ func codecDictReplacer(dict *starlark.Dict) (starlark.Value, error) {
 		return dict, nil
 	}
 	if codec == starlark.String("dataclass") {
-		return NewDataclassFromDict(dict), nil
+		return &Dataclass{Dict: dict}, nil
 	}
 	return dict, nil
 }
 
 // replaceDict traverses JSON decoded data structure (starlark.Value) and replaces each JSON object (starlark.Dict) with
-// a value returned by the replacer function. This is used to enable custom JSON decoding, to support Dataclass.
-// The idea is similar to Python's JSON decoder object_hook https://docs.python.org/3/library/json.html#encoders-and-decoders
+// a value returned by the replacer function. This is used to enable custom JSON decoding, for example to support
+// Dataclass. The idea is similar to Python's JSON decoder object_hook https://docs.python.org/3/library/json.html#encoders-and-decoders
 // See also: codecDictReplacer
 func replaceDict(value starlark.Value, replacer func(d *starlark.Dict) (starlark.Value, error)) (starlark.Value, error) {
 	switch value := value.(type) {
