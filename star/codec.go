@@ -153,7 +153,7 @@ func codecDictReplacer(dict *starlark.Dict) (starlark.Value, error) {
 		return dict, nil
 	}
 	if codec == starlark.String("dataclass") {
-		return &Dataclass{Dict: dict}, nil
+		return NewDataclassFromDict(dict), nil
 	}
 	return dict, nil
 }
