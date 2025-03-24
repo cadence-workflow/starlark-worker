@@ -259,3 +259,24 @@ func TestDecode(t *testing.T) {
 		require.True(t, ok, fmt.Sprintf("bad error type: %T", err))
 	})
 }
+
+func TestCodecDictReplacer_PreservesCodecKey(t *testing.T) {
+	dict := &starlark.Dict{}
+	require.NoError(t, dict.SetKey(starlark.String("__codec__"), starlark.String("dataclass")))
+	require.NoError(t, dict.SetKey(starlark.String("pi"), starlark.Float(3.14)))
+	require.NoError(t, dict.SetKey(starlark.String("test"), starlark.True))
+
+	// Run through the replacer
+	res, err := codecDictReplacer(dict)
+	require.NoError(t, err)
+
+	// Should return a Dataclass
+	_, ok := res.(Dataclass)
+	require.True(t, ok, "result should be a Dataclass")
+
+	// Original dict should still contain __codec__
+	codecVal, found, err := dict.Get(starlark.String("__codec__"))
+	require.NoError(t, err)
+	require.True(t, found, "__codec__ should still be present in the original dict")
+	require.Equal(t, starlark.String("dataclass"), codecVal)
+}
