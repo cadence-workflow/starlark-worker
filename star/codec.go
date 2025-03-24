@@ -156,6 +156,9 @@ func codecDictReplacer(dict *starlark.Dict) (starlark.Value, error) {
 		// Create a shallow copy without __codec__
 		tempDict := starlark.NewDict(dict.Len() - 1)
 		for _, item := range dict.Items() {
+			if len(item) != 2 {
+				continue
+			}
 			if keyStr, ok := item[0].(starlark.String); ok && keyStr == "__codec__" {
 				continue
 			}
