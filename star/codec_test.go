@@ -46,11 +46,11 @@ func TestEncode(t *testing.T) {
 
 	t.Run("dataclass", func(t *testing.T) {
 		// bytes are encoded as quoted base64 string
-		input := &starlark.Dict{}
-		require.NoError(t, input.SetKey(starlark.String("__codec__"), starlark.String("dataclass")))
-		require.NoError(t, input.SetKey(starlark.String("pi"), starlark.Float(3.14)))
-		require.NoError(t, input.SetKey(starlark.String("test"), starlark.True))
-		res, err := Encode(&Dataclass{Dict: input})
+		input := starlark.StringDict{
+			"pi":   starlark.Float(3.14),
+			"test": starlark.True,
+		}
+		res, err := Encode(NewDataclass(input))
 		require.NoError(t, err)
 		require.Equal(t, []byte(`{"__codec__":"dataclass","pi":3.14,"test":true}`), res)
 	})
@@ -243,11 +243,11 @@ func TestDecode(t *testing.T) {
 		// value can accept any starlark type
 		var out starlark.Value
 		require.NoError(t, Decode([]byte(`{"__codec__":"dataclass","pi":3.14,"test":true}`), &out))
-		expected := &starlark.Dict{}
-		require.NoError(t, expected.SetKey(starlark.String("__codec__"), starlark.String("dataclass")))
-		require.NoError(t, expected.SetKey(starlark.String("pi"), starlark.Float(3.14)))
-		require.NoError(t, expected.SetKey(starlark.String("test"), starlark.True))
-		require.Equal(t, &Dataclass{Dict: expected}, out)
+		expected := starlark.StringDict{
+			"pi":   starlark.Float(3.14),
+			"test": starlark.True,
+		}
+		require.Equal(t, NewDataclass(expected), out)
 	})
 
 	t.Run("go-interface", func(t *testing.T) {
