@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestEncode(t *testing.T) {
+func TestCodec(t *testing.T) {
 
 	t.Run("bytes", func(t *testing.T) {
 		// bytes are encoded as quoted base64 string
