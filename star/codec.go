@@ -142,18 +142,29 @@ func Decode(line []byte, out any) (err error) {
 	return nil
 }
 
-// codecDictReplacer replaces dictionaries with __codec__ key with an appropriate starlark object, such us Dataclass.
+// codecDictReplacer replaces special "codec dictionaries" with custom starlark objects, such us Dataclass.
 // See also: replaceDict
 func codecDictReplacer(dict *starlark.Dict) (starlark.Value, error) {
-	codec, found, err := dict.Delete(starlark.String("__codec__"))
+	codec, found, err := dict.Get(starlark.String("__codec__"))
 	if err != nil {
 		return nil, err
 	}
 	if !found {
 		return dict, nil
 	}
-	if codec == starlark.String("dataclass") {
-		return NewDataclassFromDict(dict), nil
+	if codec == starlark.String(DataclassType) {
+		// Create a shallow copy without __codec__
+		tempDict := starlark.NewDict(dict.Len() - 1)
+		for _, item := range dict.Items() {
+			if len(item) != 2 {
+				continue
+			}
+			if keyStr, ok := item[0].(starlark.String); ok && keyStr == "__codec__" {
+				continue
+			}
+			_ = tempDict.SetKey(item[0], item[1])
+		}
+		return NewDataclassFromDict(tempDict), nil
 	}
 	return dict, nil
 }
