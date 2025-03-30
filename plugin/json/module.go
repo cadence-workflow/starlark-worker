@@ -2,11 +2,10 @@ package json
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +33,7 @@ func dumps(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs 
 	// dumps(obj)
 	// Serialize `obj` to a JSON formatted `str`
 
-	ctx := cadstar.GetContext(t)
+	ctx := service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
 	var obj starlark.Value
@@ -57,7 +56,7 @@ func loads(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs 
 	// Deserialize `s` (a `string` or `bytes` instance containing a JSON document)
 	// to a Python object.
 
-	ctx := cadstar.GetContext(t)
+	ctx := service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
 	var s starlark.Value
@@ -77,7 +76,7 @@ func loads(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs 
 		code := "bad-request"
 		details := fmt.Sprintf("argument must be a string or bytes; actual: %T: %s", s, s.String())
 		logger.Error(code, zap.String("details", details))
-		return nil, cadence.NewCustomError(code, details)
+		return nil, workflow.NewCustomError(code, details)
 	}
 
 	var res starlark.Value

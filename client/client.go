@@ -3,8 +3,8 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
 	"github.com/cadence-workflow/starlark-worker/ext"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
 	cadenceshared "go.uber.org/cadence/.gen/go/shared"
@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-var WorkflowFunc any = (*cadstar.Service)(nil).Run
+var WorkflowFunc any = (*service.Service)(nil).Run
 
 func Run(
 	tar []byte,

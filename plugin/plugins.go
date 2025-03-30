@@ -1,7 +1,7 @@
 package plugin
 
 import (
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/plugin/atexit"
 	"github.com/cadence-workflow/starlark-worker/plugin/cad"
 	"github.com/cadence-workflow/starlark-worker/plugin/concurrent"
@@ -16,7 +16,7 @@ import (
 	"github.com/cadence-workflow/starlark-worker/plugin/uuid"
 )
 
-var Registry = map[string]cadstar.IPlugin{
+var Registry = map[string]workflow.IPlugin{
 	cad.Plugin.ID():        cad.Plugin,
 	request.Plugin.ID():    request.Plugin,
 	time.Plugin.ID():       time.Plugin,

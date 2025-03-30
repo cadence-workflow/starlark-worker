@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
+	"github.com/cadence-workflow/starlark-worker/internal/activity"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	jsoniter "github.com/json-iterator/go"
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/activity"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 	"io"
@@ -37,7 +37,7 @@ type JSONRequest struct {
 	Assert  Assert              `json:"assert,omitempty"`
 }
 
-func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, *cadence.CustomError) {
+func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("activity-start", zap.Any("request", request))
 
@@ -56,7 +56,7 @@ func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, *cad
 	if request.Body != nil {
 		if bb, err = jsoniter.Marshal(request.Body); err != nil {
 			logger.Error("activity-error", ext.ZapError(err)...)
-			return nil, cadence.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
+			return nil, workflow.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
 		}
 	}
 
@@ -78,7 +78,7 @@ func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, *cad
 
 	if req, err = createRequest(ctx, request.Method, request.URL, header, bb); err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, cadence.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
+		return nil, workflow.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
 	}
 
 	if res, err = r.client.Do(req); err != nil {
@@ -92,7 +92,7 @@ func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, *cad
 			)
 		}
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, cadence.NewCustomError(yarpcerrors.CodeUnknown.String(), err.Error())
+		return nil, workflow.NewCustomError(yarpcerrors.CodeUnknown.String(), err.Error())
 	}
 
 	var expectedStatusCode = false
@@ -105,7 +105,7 @@ func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, *cad
 	if !expectedStatusCode {
 		details := fmt.Sprintf("bad http response status code: expected: %v, got: %d", request.Assert.StatusCodes, res.StatusCode)
 		logger.Error("activity-error", zap.String("details", details))
-		return nil, cadence.NewCustomError(strconv.Itoa(res.StatusCode), details)
+		return nil, workflow.NewCustomError(strconv.Itoa(res.StatusCode), details)
 	}
 
 	var _res any
@@ -113,14 +113,14 @@ func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, *cad
 		logger.Error("activity-error", ext.ZapError(err)...)
 		code := "400" // bad-request https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
 		details := fmt.Sprintf("http response body is not a json: %s", err.Error())
-		return nil, cadence.NewCustomError(code, details)
+		return nil, workflow.NewCustomError(code, details)
 	}
 
 	if request.Assert.Path != "" {
 		value, err := ext.JP[any](_res, request.Assert.Path)
 		if err != nil {
 			// 412 - precondition-failed https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/412
-			return nil, cadence.NewCustomError("412", _res)
+			return nil, workflow.NewCustomError("412", _res)
 		}
 		if request.Assert.Value != nil {
 			var found bool
@@ -132,7 +132,7 @@ func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, *cad
 			}
 			if !found {
 				// 412 - precondition-failed https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/412
-				return nil, cadence.NewCustomError("412", _res)
+				return nil, workflow.NewCustomError("412", _res)
 			}
 		}
 	}
@@ -145,7 +145,7 @@ func (r *activities) Do(
 	url string,
 	headers map[string][]string,
 	body []byte,
-) ([]byte, *cadence.CustomError) {
+) ([]byte, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info(
 		"activity-start",
@@ -155,23 +155,23 @@ func (r *activities) Do(
 	)
 	if req, err := createRequest(ctx, method, url, headers, body); err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, cadence.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
+		return nil, workflow.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
 	} else {
 		return do(ctx, r.client, req)
 	}
 }
 
-func do(ctx context.Context, client *http.Client, req *http.Request) ([]byte, *cadence.CustomError) {
+func do(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
 	logger := activity.GetLogger(ctx)
 	res, err := client.Do(req)
 	if err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, cadence.NewCustomError(yarpcerrors.CodeUnknown.String(), err.Error())
+		return nil, workflow.NewCustomError(yarpcerrors.CodeUnknown.String(), err.Error())
 	}
 	var buf bytes.Buffer
 	if err := res.Write(&buf); err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, cadence.NewCustomError(yarpcerrors.CodeInternal.String(), err.Error())
+		return nil, workflow.NewCustomError(yarpcerrors.CodeInternal.String(), err.Error())
 	}
 	return buf.Bytes(), nil
 }

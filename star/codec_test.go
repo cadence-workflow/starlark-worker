@@ -130,7 +130,7 @@ func TestCodec(t *testing.T) {
 	})
 
 	t.Run("go-string", func(t *testing.T) {
-		// go interfaces are not supported
+		// go workflow are not supported
 		input := "abc"
 		_, err := Encode(input)
 		require.Error(t, err)
@@ -139,7 +139,7 @@ func TestCodec(t *testing.T) {
 	})
 
 	t.Run("go-slice", func(t *testing.T) {
-		// go interfaces are not supported
+		// go workflow are not supported
 		input := []any{"pi", 3.14}
 		_, err := Encode(input)
 		require.Error(t, err)
@@ -251,7 +251,7 @@ func TestDecode(t *testing.T) {
 	})
 
 	t.Run("go-interface", func(t *testing.T) {
-		// go interfaces are not supported
+		// go workflow are not supported
 		var out any
 		err := Decode([]byte(`"abc"`), &out)
 		require.Error(t, err)

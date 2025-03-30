@@ -2,18 +2,17 @@ package cad
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
 	"github.com/cadence-workflow/starlark-worker/ext"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
 
 type Module struct {
-	info *workflow.Info
+	info workflow.IInfo
 }
 
 var _ starlark.HasAttrs = &Module{}
@@ -38,18 +37,18 @@ var properties = map[string]star.PropertyFactory{
 
 func _executionID(receiver starlark.Value) (starlark.Value, error) {
 	info := receiver.(*Module).info
-	return starlark.String(info.WorkflowExecution.ID), nil
+	return starlark.String(info.ExecutionID()), nil
 }
 
 func _executionRunID(receiver starlark.Value) (starlark.Value, error) {
 	info := receiver.(*Module).info
-	return starlark.String(info.WorkflowExecution.RunID), nil
+	return starlark.String(info.RunID()), nil
 }
 
 func _executeActivity(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	activityID := args[0].(starlark.String).GoString()
 	activityArgs := sliceTuple(args[1:])
-	var ctx = cadstar.GetContext(t)
+	var ctx = service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 	var asBytes bool
 	for _, kv := range kwargs {
@@ -62,11 +61,11 @@ func _executeActivity(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tup
 			asBytes = bool(kv[1].(starlark.Bool))
 		case "headers":
 			// TODO: [feature] execute activity with given headers (context propagator)
-			err := cadence.NewCustomError(yarpcerrors.CodeUnimplemented.String())
+			err := workflow.NewCustomError(yarpcerrors.CodeUnimplemented.String())
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		default:
-			err := cadence.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
+			err := workflow.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		}
@@ -78,7 +77,7 @@ func _executeActivity(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tup
 func _executeWorkflow(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	workflowID := args[0].(starlark.String).GoString()
 	workflowArgs := sliceTuple(args[1:])
-	var ctx = cadstar.GetContext(t)
+	var ctx = service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 	var asBytes bool
 	for _, kv := range kwargs {
@@ -94,11 +93,11 @@ func _executeWorkflow(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tup
 			asBytes = bool(kv[1].(starlark.Bool))
 		case "headers":
 			// TODO: [feature] execute workflow with given headers (context propagator)
-			err := cadence.NewCustomError(yarpcerrors.CodeUnimplemented.String())
+			err := workflow.NewCustomError(yarpcerrors.CodeUnimplemented.String())
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		default:
-			err := cadence.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
+			err := workflow.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		}

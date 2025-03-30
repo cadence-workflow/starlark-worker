@@ -3,10 +3,10 @@ package progress
 import (
 	"fmt"
 
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 )
 
@@ -50,7 +50,7 @@ func report(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 	// report(progress: str)
 	// Report a progress string
 
-	ctx := cadstar.GetContext(t)
+	ctx := service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
 	var progressStr starlark.String
@@ -61,7 +61,7 @@ func report(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 	}
 
 	logger.Info(_taskProgressQueryHandlerKey, zap.String("msg", string(progressStr)))
-	progress := cadstar.GetProgress(ctx)
+	progress := service.GetProgress(ctx)
 	// Not that this push back is not thread-safe
 	progress.PushBack(string(progressStr))
 	return starlark.None, nil

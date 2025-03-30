@@ -2,11 +2,11 @@ package concurrent
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/plugin/cad"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/workflow"
 )
 
 type Module struct{}
@@ -28,12 +28,12 @@ var builtins = map[string]*starlark.Builtin{
 var properties = map[string]star.PropertyFactory{}
 
 func run(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var ctx = cadstar.GetContext(t)
+	var ctx = service.GetContext(t)
 	future, settable := workflow.NewFuture(ctx)
 	fn := args[0]
 	args = args[1:]
 	workflow.Go(ctx, func(ctx workflow.Context) {
-		subT := cadstar.CreateThread(ctx)
+		subT := service.CreateThread(ctx)
 		settable.Set(starlark.Call(subT, fn, args, kwargs))
 	})
 	return &cad.Future{Future: future}, nil

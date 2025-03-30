@@ -1,7 +1,7 @@
 package cad
 
 import (
-	"go.uber.org/cadence/workflow"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"go.uber.org/yarpc/yarpcerrors"
 	"time"
 )

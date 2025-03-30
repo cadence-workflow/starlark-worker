@@ -2,9 +2,9 @@ package test
 
 import (
 	"fmt"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence"
 )
 
 type Module struct{}
@@ -39,7 +39,7 @@ func _true(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs 
 		if message != nil {
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
-		return nil, cadence.NewCustomError(code)
+		return nil, workflow.NewCustomError(code)
 	}
 	return starlark.None, nil
 }
@@ -55,7 +55,7 @@ func _false(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 		if message != nil {
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
-		return nil, cadence.NewCustomError(code)
+		return nil, workflow.NewCustomError(code)
 	}
 	return starlark.None, nil
 }
@@ -74,7 +74,7 @@ func _equal(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
 		code = fmt.Sprintf("%s\nExpected : %s\nActual   : %s", code, expected.String(), actual.String())
-		return nil, cadence.NewCustomError(code)
+		return nil, workflow.NewCustomError(code)
 	}
 	return starlark.None, nil
 }
@@ -94,7 +94,7 @@ func _notEqual(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwa
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
 		code = fmt.Sprintf("%s\nExpected : %s\nActual   : %s", code, expected.String(), actual.String())
-		return nil, cadence.NewCustomError(code)
+		return nil, workflow.NewCustomError(code)
 	}
 	return starlark.None, nil
 }

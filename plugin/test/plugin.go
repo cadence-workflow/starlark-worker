@@ -1,9 +1,9 @@
 package test
 
 import (
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/worker"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/worker"
 )
 
 const pluginID = "test"
@@ -12,13 +12,13 @@ var Plugin = &plugin{}
 
 type plugin struct{}
 
-var _ cadstar.IPlugin = (*plugin)(nil)
+var _ workflow.IPlugin = (*plugin)(nil)
 
 func (r *plugin) ID() string {
 	return pluginID
 }
 
-func (r *plugin) Create(_ cadstar.RunInfo) starlark.Value {
+func (r *plugin) Create(_ workflow.RunInfo) starlark.Value {
 	return &Module{}
 }
 
