@@ -45,7 +45,7 @@ func main() {
 		Plugins:        plugin.Registry,
 		ClientTaskList: opt.ClientTaskList,
 	}
-	serviceWorker := service.Register(cadence.CadenceBackend, opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
+	serviceWorker := service.Register(cadence.GetBackend(), opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
 
 	if err := serviceWorker.Start(); err != nil {
 		logger.Fatal("Start", zap.Error(err))

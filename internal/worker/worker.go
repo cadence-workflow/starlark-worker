@@ -5,7 +5,7 @@ type Worker interface {
 	Start() error
 	// Run is a blocking start and cleans up resources when killed
 	// returns error only if it fails to start the worker
-	Run() error
+	Run(interruptCh <-chan interface{}) error
 	// Stop cleans up any resources opened by worker
 	Stop()
 }
@@ -29,6 +29,12 @@ type RegisterWorkflowOptions struct {
 	// This option has no effect when explicit Name is provided.
 	EnableShortName               bool
 	DisableAlreadyRegisteredCheck bool
+	// This is for temporal RegisterOptions
+	// Optional: Provides a Versioning Behavior to workflows of this type. It is required
+	// when WorkerOptions does not specify [DeploymentOptions.DefaultVersioningBehavior],
+	// [DeploymentOptions.DeploymentSeriesName] is set, and [UseBuildIDForVersioning] is true.
+	// NOTE: Experimental
+	VersioningBehavior int
 }
 
 func RegisterWorkflow(w interface{}) {
@@ -81,4 +87,8 @@ type RegisterActivityOptions struct {
 	// This option has no effect if the activity is executed with a HeartbeatTimeout of 0.
 	// Default: false
 	EnableAutoHeartbeat bool
+	// This is for temporal activity RegisterOptions
+	// When registering a struct with activities, skip functions that are not valid activities. If false,
+	// registration panics.
+	SkipInvalidStructFunctions bool
 }

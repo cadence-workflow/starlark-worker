@@ -49,65 +49,68 @@ func _executeActivity(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tup
 	activityID := args[0].(starlark.String).GoString()
 	activityArgs := sliceTuple(args[1:])
 	var ctx = service.GetContext(t)
-	logger := workflow.GetLogger(ctx)
+	var w = service.GetWorkflow(t)
+	logger := w.GetLogger(ctx)
 	var asBytes bool
 	for _, kv := range kwargs {
 		k := kv[0].(starlark.String)
 		switch k {
 		case "task_list":
 			v := kv[1].(starlark.String).GoString()
-			ctx = workflow.WithTaskList(ctx, v)
+			ctx = w.WithTaskList(ctx, v)
 		case "as_bytes":
 			asBytes = bool(kv[1].(starlark.Bool))
 		case "headers":
 			// TODO: [feature] execute activity with given headers (context propagator)
-			err := workflow.NewCustomError(yarpcerrors.CodeUnimplemented.String())
+			err := w.NewCustomError(yarpcerrors.CodeUnimplemented.String())
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		default:
-			err := workflow.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
+			err := w.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		}
 	}
-	f := workflow.ExecuteActivity(ctx, activityID, activityArgs...)
-	return executeFuture(ctx, f, asBytes)
+	f := w.ExecuteActivity(ctx, activityID, activityArgs...)
+	return executeFuture(ctx, w, f, asBytes)
 }
 
 func _executeWorkflow(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	workflowID := args[0].(starlark.String).GoString()
 	workflowArgs := sliceTuple(args[1:])
 	var ctx = service.GetContext(t)
-	logger := workflow.GetLogger(ctx)
+	var w = service.GetWorkflow(t)
+	logger := w.GetLogger(ctx)
 	var asBytes bool
 	for _, kv := range kwargs {
 		k := kv[0].(starlark.String)
 		switch k {
 		case "domain":
 			v := kv[1].(starlark.String).GoString()
-			ctx = workflow.WithWorkflowDomain(ctx, v)
+			ctx = w.WithWorkflowDomain(ctx, v)
 		case "task_list":
 			v := kv[1].(starlark.String).GoString()
-			ctx = workflow.WithWorkflowTaskList(ctx, v)
+			ctx = w.WithWorkflowTaskList(ctx, v)
 		case "as_bytes":
 			asBytes = bool(kv[1].(starlark.Bool))
 		case "headers":
 			// TODO: [feature] execute workflow with given headers (context propagator)
-			err := workflow.NewCustomError(yarpcerrors.CodeUnimplemented.String())
+			err := w.NewCustomError(yarpcerrors.CodeUnimplemented.String())
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		default:
-			err := workflow.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
+			err := w.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), fmt.Sprintf("unsupported key: %v", k))
 			logger.Error("builtin-error", ext.ZapError(err)...)
 			return nil, err
 		}
 	}
-	f := workflow.ExecuteChildWorkflow(ctx, workflowID, workflowArgs...)
-	return executeFuture(ctx, f, asBytes)
+	f := w.ExecuteChildWorkflow(ctx, workflowID, workflowArgs...)
+	return executeFuture(ctx, w, f, asBytes)
 }
 
 func executeFuture(
 	ctx workflow.Context,
+	w workflow.Workflow,
 	future workflow.Future,
 	asBytes bool,
 ) (starlark.Value, error) {
@@ -120,7 +123,7 @@ func executeFuture(
 		err = future.Get(ctx, &resValue)
 	}
 	if err != nil {
-		workflow.GetLogger(ctx).Error("builtin-error", zap.Bool("asBytes", asBytes), zap.Error(err))
+		w.GetLogger(ctx).Error("builtin-error", zap.Bool("asBytes", asBytes), zap.Error(err))
 		return nil, err
 	}
 	if asBytes {

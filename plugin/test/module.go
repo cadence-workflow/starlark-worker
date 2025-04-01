@@ -2,7 +2,7 @@ package test
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
 )
@@ -28,7 +28,8 @@ var builtins = map[string]*starlark.Builtin{
 
 var properties = map[string]star.PropertyFactory{}
 
-func _true(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func _true(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	w := service.GetWorkflow(t)
 	var v starlark.Value
 	var message starlark.Value
 	if err := starlark.UnpackArgs("true", args, kwargs, "v", &v, "message?", &message); err != nil {
@@ -39,12 +40,13 @@ func _true(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs 
 		if message != nil {
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
-		return nil, workflow.NewCustomError(code)
+		return nil, w.NewCustomError(code)
 	}
 	return starlark.None, nil
 }
 
-func _false(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func _false(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	w := service.GetWorkflow(t)
 	var v starlark.Value
 	var message starlark.Value
 	if err := starlark.UnpackArgs("false", args, kwargs, "v", &v, "message?", &message); err != nil {
@@ -55,12 +57,13 @@ func _false(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 		if message != nil {
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
-		return nil, workflow.NewCustomError(code)
+		return nil, w.NewCustomError(code)
 	}
 	return starlark.None, nil
 }
 
-func _equal(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func _equal(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	w := service.GetWorkflow(t)
 	var expected, actual starlark.Value
 	var message starlark.Value
 	if err := starlark.UnpackArgs("equal", args, kwargs, "expected", &expected, "actual", &actual, "message?", &message); err != nil {
@@ -74,12 +77,13 @@ func _equal(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
 		code = fmt.Sprintf("%s\nExpected : %s\nActual   : %s", code, expected.String(), actual.String())
-		return nil, workflow.NewCustomError(code)
+		return nil, w.NewCustomError(code)
 	}
 	return starlark.None, nil
 }
 
-func _notEqual(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func _notEqual(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	w := service.GetWorkflow(t)
 	// TODO: [dry] reuse code between equals and not-equals, true and false built-ins
 	var expected, actual starlark.Value
 	var message starlark.Value
@@ -94,7 +98,7 @@ func _notEqual(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwa
 			code = fmt.Sprintf("%s: %s", code, message.String())
 		}
 		code = fmt.Sprintf("%s\nExpected : %s\nActual   : %s", code, expected.String(), actual.String())
-		return nil, workflow.NewCustomError(code)
+		return nil, w.NewCustomError(code)
 	}
 	return starlark.None, nil
 }

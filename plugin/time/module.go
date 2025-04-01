@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
@@ -42,7 +41,8 @@ var properties = map[string]star.PropertyFactory{}
 // Returns: None
 func _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	logger := workflow.GetLogger(ctx)
+	w := service.GetWorkflow(t)
+	logger := w.GetLogger(ctx)
 
 	var seconds starlark.Value
 	if err := starlark.UnpackArgs("sleep", args, kwargs, "seconds", &seconds); err != nil {
@@ -60,17 +60,18 @@ func _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwarg
 		code := "bad-request"
 		details := fmt.Sprintf("bad argument type: %T: %v", seconds, seconds)
 		logger.Error(code, zap.String("details", details))
-		return starlark.None, workflow.NewCustomError(code, details)
+		return starlark.None, w.NewCustomError(code, details)
 	}
 
-	return starlark.None, workflow.Sleep(ctx, time.Duration(float64(time.Second)*sf))
+	return starlark.None, w.Sleep(ctx, time.Duration(float64(time.Second)*sf))
 }
 
 // _time_ns is similar to _time but returns time as an integer number of nanoseconds since the epoch.
 // Returns: int
 func _time_ns(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	ns := workflow.Now(ctx).UnixNano()
+	w := service.GetWorkflow(t)
+	ns := w.Now(ctx).UnixNano()
 	return starlark.MakeInt64(ns), nil
 }
 
@@ -79,7 +80,8 @@ func _time_ns(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []sta
 // Returns: float
 func _time(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	ns := workflow.Now(ctx).UnixNano()
+	w := service.GetWorkflow(t)
+	ns := w.Now(ctx).UnixNano()
 	sec := float64(ns) / 1e9
 	return starlark.Float(sec), nil
 }
@@ -92,7 +94,8 @@ func _time(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starla
 // Returns: str
 func _utc_format_seconds(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kw []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	logger := workflow.GetLogger(ctx)
+	w := service.GetWorkflow(t)
+	logger := w.GetLogger(ctx)
 
 	var format string
 	var seconds float64
@@ -107,7 +110,7 @@ func _utc_format_seconds(t *starlark.Thread, _ *starlark.Builtin, args starlark.
 	replacer := strings.NewReplacer("%Y", "2006", "%m", "01", "%d", "02", "%H", "15", "%M", "04", "%S", "05", "%y", "06")
 	format = replacer.Replace(format)
 	if strings.Contains(format, "%") {
-		return nil, workflow.NewCustomError("400", fmt.Sprintf("unsupported date format: %s", format))
+		return nil, w.NewCustomError("400", fmt.Sprintf("unsupported date format: %s", format))
 	}
 
 	res := time.Unix(int64(seconds), 0).UTC().Format(format)

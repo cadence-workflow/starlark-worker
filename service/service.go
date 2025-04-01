@@ -54,6 +54,8 @@ func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
 type Service struct {
 	Plugins        map[string]workflow.IPlugin
 	ClientTaskList string
+
+	workflow workflow.Workflow
 }
 
 // TODO: [feature] Cadence workflow with starlark REPL (event listener loop?) starlark.ExecREPLChunk()
@@ -71,7 +73,7 @@ func (r *Service) Run(
 	err error,
 ) {
 
-	logger := workflow.GetLogger(ctx)
+	logger := r.workflow.GetLogger(ctx)
 
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -96,11 +98,11 @@ func (r *Service) Run(
 
 	ao := extcadence.DefaultActivityOptions
 	ao.TaskList = r.ClientTaskList
-	ctx = workflow.WithActivityOptions(ctx, ao)
+	ctx = r.workflow.WithActivityOptions(ctx, ao)
 
 	cwo := extcadence.DefaultChildWorkflowOptions
 	cwo.TaskList = r.ClientTaskList
-	ctx = workflow.WithChildOptions(ctx, cwo)
+	ctx = r.workflow.WithChildOptions(ctx, cwo)
 
 	globals := &_Globals{
 		exitHooks:  &ExitHooks{},
@@ -110,7 +112,7 @@ func (r *Service) Run(
 		progress:   list.New(),
 		plugins:    r.Plugins,
 	}
-	ctx = workflow.WithValue(ctx, contextKeyGlobals, globals)
+	ctx = r.workflow.WithValue(ctx, contextKeyGlobals, globals)
 
 	var fs star.FS
 	if fs, err = star.NewTarFS(tar); err != nil {
@@ -141,7 +143,7 @@ func (r *Service) Run(
 	}
 
 	runInfo := workflow.RunInfo{
-		Info:    workflow.GetInfo(ctx),
+		Info:    r.workflow.GetInfo(ctx),
 		Environ: environ,
 	}
 
@@ -150,7 +152,7 @@ func (r *Service) Run(
 		plugins[pID] = p.Create(runInfo)
 	}
 
-	if err := workflow.SetQueryHandler(ctx, "logs", func() (any, error) {
+	if err := r.workflow.SetQueryHandler(ctx, "logs", func() (any, error) {
 		logs := make([]any, globals.logs.Len())
 		var i int
 		for e := globals.logs.Front(); e != nil; e = e.Next() {
@@ -163,7 +165,7 @@ func (r *Service) Run(
 		return nil, err
 	}
 
-	if err := workflow.SetQueryHandler(ctx, "task_progress", func() (any, error) {
+	if err := r.workflow.SetQueryHandler(ctx, "task_progress", func() (any, error) {
 		progress := make([]any, globals.progress.Len())
 		var i int
 		for e := globals.progress.Front(); e != nil; e = e.Next() {
@@ -176,7 +178,7 @@ func (r *Service) Run(
 		return nil, err
 	}
 
-	t := CreateThread(ctx)
+	t := CreateThread(ctx, r.workflow)
 	t.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugins})
 
 	// Run main user code
@@ -186,7 +188,7 @@ func (r *Service) Run(
 		var canceledError *cadence.CanceledError
 		if errors.As(err, &canceledError) {
 			globals.isCanceled = true
-			ctx, _ = workflow.NewDisconnectedContext(ctx)
+			ctx, _ = r.workflow.NewDisconnectedContext(ctx)
 		}
 	}
 
@@ -196,26 +198,26 @@ func (r *Service) Run(
 		err = errors.Join(err, _err)
 	}
 
-	err = processError(ctx, err)
+	err = r.processError(ctx, err)
 
 	if err != nil {
-		exec := workflow.GetInfo(ctx)
+		exec := r.workflow.GetInfo(ctx)
 		tags := map[string]string{
 			"w_id":   exec.ExecutionID(),
 			"run_id": exec.RunID(),
 			"error":  err.Error(),
 		}
-		workflow.GetMetricsScope(ctx).Tagged(tags).Gauge("workflow.error").Update(1)
+		r.workflow.GetMetricsScope(ctx).Tagged(tags).Gauge("workflow.error").Update(1)
 	}
 	logger.Info("workflow-end")
 	return res, err
 }
 
-func processError(ctx workflow.Context, err error) error {
+func (r *Service) processError(ctx workflow.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	logger := workflow.GetLogger(ctx)
+	logger := r.workflow.GetLogger(ctx)
 
 	details := map[string]any{"error": err.Error()}
 	var evalErr *starlark.EvalError

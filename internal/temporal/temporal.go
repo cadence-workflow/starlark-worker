@@ -1,12 +1,41 @@
 package temporal
 
 import (
+	"github.com/cadence-workflow/starlark-worker/internal/backend"
+	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/uber-go/tally"
+	tempactivity "go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	tmpworker "go.temporal.io/sdk/worker"
 	temp "go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
+	"time"
 )
+
+func GetBackend() backend.Backend {
+	return temporalBackend{}
+}
+
+type temporalBackend struct{}
+
+func (c temporalBackend) RegisterWorkflow() workflow.Workflow {
+	return &temporalWorkflow{}
+}
+
+func (c temporalBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
+	client, err := newClient(url, domain)
+	if err != nil {
+		panic("failed to create temporal client")
+	}
+	worker := tmpworker.New(
+		client,
+		taskList,
+		tmpworker.Options{},
+	)
+	return &temporalWorker{w: worker}
+}
 
 type temporalWorkflow struct{}
 
@@ -18,12 +47,98 @@ type temporalFuture struct {
 	f temp.Future
 }
 
+type temporalChildWorkflowFuture struct {
+	cf temp.ChildWorkflowFuture
+}
+
+type temporalSettable struct {
+	s temp.Settable
+}
+
+type temporalWorker struct {
+	w tmpworker.Worker
+}
+
 func (f *temporalFuture) Get(ctx workflow.Context, valPtr interface{}) error {
 	return f.f.Get(ctx.(temp.Context), valPtr)
 }
-
 func (f *temporalFuture) IsReady() bool {
 	return f.f.IsReady()
+}
+
+func (worker *temporalWorker) RegisterWorkflow(w interface{}) {
+	worker.w.RegisterWorkflow(w)
+}
+
+func (worker *temporalWorker) RegisterActivity(a interface{}) {
+	worker.w.RegisterActivity(a)
+}
+
+func (worker *temporalWorker) Start() error {
+	return worker.w.Start()
+}
+
+func (worker *temporalWorker) Run(interruptCh <-chan interface{}) error {
+	return worker.w.Run(interruptCh)
+}
+
+func (worker *temporalWorker) Stop() {
+	worker.w.Stop()
+}
+
+var _ worker.Worker = (*temporalWorker)(nil)
+
+func (worker *temporalWorker) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
+	worker.w.RegisterWorkflowWithOptions(w, temp.RegisterOptions{
+		Name: options.Name,
+		// Optional: Provides a Versioning Behavior to workflows of this type. It is required
+		// when WorkerOptions does not specify [DeploymentOptions.DefaultVersioningBehavior],
+		// [DeploymentOptions.DeploymentSeriesName] is set, and [UseBuildIDForVersioning] is true.
+		// NOTE: Experimental
+		VersioningBehavior:            temp.VersioningBehavior(options.VersioningBehavior),
+		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
+	})
+}
+
+func (worker *temporalWorker) RegisterActivityWithOptions(w interface{}, options worker.RegisterActivityOptions) {
+	worker.w.RegisterActivityWithOptions(w, tempactivity.RegisterOptions{
+		Name:                          options.Name,
+		SkipInvalidStructFunctions:    options.SkipInvalidStructFunctions,
+		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
+	})
+}
+
+func (s *temporalSettable) SetValue(value interface{}) {
+	s.s.SetValue(value)
+}
+
+func (s *temporalSettable) SetError(err error) {
+	s.s.SetError(err)
+}
+
+func (s *temporalSettable) Set(value interface{}, err error) {
+	s.s.Set(value, err)
+}
+
+func (s *temporalSettable) Chain(future workflow.Future) {
+	s.s.Chain(future.(*temporalFuture).f)
+}
+
+func (f *temporalChildWorkflowFuture) Get(ctx workflow.Context, valPtr interface{}) error {
+	return f.cf.Get(ctx.(temp.Context), valPtr)
+}
+
+func (f *temporalChildWorkflowFuture) IsReady() bool {
+	return f.cf.IsReady()
+}
+func (f *temporalChildWorkflowFuture) GetChildWorkflowExecution() workflow.Future {
+	future := f.cf.GetChildWorkflowExecution()
+	return &temporalFuture{f: future}
+}
+
+func (f *temporalChildWorkflowFuture) SignalChildWorkflow(ctx workflow.Context, signalName string, data interface{}) workflow.Future {
+	future := f.cf.SignalChildWorkflow(ctx.(temp.Context), signalName, data)
+	return &temporalFuture{f: future}
 }
 
 func (w *workflowInfo) ExecutionID() string {
@@ -100,4 +215,59 @@ func (w *temporalWorkflow) WithActivityOptions(ctx workflow.Context, options wor
 		}
 	}
 	return temp.WithActivityOptions(ctx.(temp.Context), cadOptions)
+}
+
+func (w temporalWorkflow) WithChildOptions(ctx workflow.Context, cwo workflow.ChildWorkflowOptions) workflow.Context {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) SetQueryHandler(ctx workflow.Context, queryType string, handler interface{}) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) WithWorkflowDomain(ctx workflow.Context, name string) workflow.Context {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) WithWorkflowTaskList(ctx workflow.Context, name string) workflow.Context {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) NewCustomError(reason string, details ...interface{}) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) NewFuture(ctx workflow.Context) (workflow.Future, workflow.Settable) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) SideEffect(ctx workflow.Context, f func(ctx workflow.Context) interface{}) encoded.Value {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) Now(ctx workflow.Context) time.Time {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w temporalWorkflow) Sleep(ctx workflow.Context, d time.Duration) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func newClient(location string, namespace string) (client.Client, error) {
+	options := client.Options{
+		HostPort:  location,
+		Namespace: namespace,
+	}
+
+	// Use NewLazyClient to create a lazy-initialized client
+	return client.NewLazyClient(options)
 }

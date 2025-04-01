@@ -1,6 +1,7 @@
 package cadence
 
 import (
+	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
@@ -21,7 +22,9 @@ import (
 	"time"
 )
 
-var CadenceBackend = cadenceBackend{}
+func GetBackend() backend.Backend {
+	return cadenceBackend{}
+}
 
 type cadenceBackend struct{}
 
@@ -83,7 +86,7 @@ func (worker *cadenceWorker) Start() error {
 	return worker.w.Start()
 }
 
-func (worker *cadenceWorker) Run() error {
+func (worker *cadenceWorker) Run(_ <-chan interface{}) error {
 	return worker.w.Run()
 }
 

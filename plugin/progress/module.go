@@ -3,7 +3,6 @@ package progress
 import (
 	"fmt"
 
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
@@ -51,7 +50,8 @@ func report(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 	// Report a progress string
 
 	ctx := service.GetContext(t)
-	logger := workflow.GetLogger(ctx)
+	w := service.GetWorkflow(t)
+	logger := w.GetLogger(ctx)
 
 	var progressStr starlark.String
 
