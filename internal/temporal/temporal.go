@@ -2,15 +2,19 @@ package temporal
 
 import (
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
+	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/temstar"
 	"github.com/uber-go/tally"
 	tempactivity "go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	tmpworker "go.temporal.io/sdk/worker"
 	temp "go.temporal.io/sdk/workflow"
+	cad "go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+	"reflect"
 	"time"
 )
 
@@ -18,14 +22,12 @@ func GetBackend() backend.Backend {
 	return temporalBackend{}
 }
 
+var _ backend.Backend = (*temporalBackend)(nil)
+
 type temporalBackend struct{}
 
-func (c temporalBackend) RegisterWorkflow() workflow.Workflow {
-	return &temporalWorkflow{}
-}
-
 func (c temporalBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
-	client, err := newClient(url, domain)
+	client, err := NewClient(url, domain)
 	if err != nil {
 		panic("failed to create temporal client")
 	}
@@ -59,6 +61,8 @@ type temporalWorker struct {
 	w tmpworker.Worker
 }
 
+var _ worker.Worker = (*temporalWorker)(nil)
+
 func (f *temporalFuture) Get(ctx workflow.Context, valPtr interface{}) error {
 	return f.f.Get(ctx.(temp.Context), valPtr)
 }
@@ -66,30 +70,51 @@ func (f *temporalFuture) IsReady() bool {
 	return f.f.IsReady()
 }
 
-func (worker *temporalWorker) RegisterWorkflow(w interface{}) {
-	worker.w.RegisterWorkflow(w)
+func (tw *temporalWorker) RegisterWorkflow(wf interface{}) {
+	originalFunc := reflect.ValueOf(wf)
+	originalType := originalFunc.Type()
+
+	if originalType.Kind() != reflect.Func || originalType.NumIn() == 0 {
+		panic("workflow function must be a function and have at least one argument (context)")
+	}
+
+	// Build a new function with the same signature but context converted to cadence.Context
+	wrappedFuncType := reflect.FuncOf(
+		append([]reflect.Type{reflect.TypeOf((*cad.Context)(nil)).Elem()}, worker.GetRemainingInTypes(originalType)...),
+		worker.GetOutTypes(originalType),
+		false,
+	)
+
+	wrappedFunc := reflect.MakeFunc(wrappedFuncType, func(args []reflect.Value) []reflect.Value {
+		// Replace cadence.Context with workflow.Context for original call
+		newArgs := make([]reflect.Value, len(args))
+		newArgs[0] = args[0].Convert(reflect.TypeOf((*temp.Context)(nil)).Elem()) // keep as cadence.Context
+		for i := 1; i < len(args); i++ {
+			newArgs[i] = args[i]
+		}
+		return originalFunc.Call(newArgs)
+	})
+
+	tw.w.RegisterWorkflow(wrappedFunc.Interface())
+}
+func (tw *temporalWorker) RegisterActivity(a interface{}) {
+	tw.w.RegisterActivity(a)
 }
 
-func (worker *temporalWorker) RegisterActivity(a interface{}) {
-	worker.w.RegisterActivity(a)
+func (tw *temporalWorker) Start() error {
+	return tw.w.Start()
 }
 
-func (worker *temporalWorker) Start() error {
-	return worker.w.Start()
+func (tw *temporalWorker) Stop() {
+	tw.w.Stop()
 }
 
-func (worker *temporalWorker) Run(interruptCh <-chan interface{}) error {
-	return worker.w.Run(interruptCh)
+func (tw *temporalWorker) Run(interruptCh <-chan interface{}) error {
+	return tw.w.Run(interruptCh)
 }
 
-func (worker *temporalWorker) Stop() {
-	worker.w.Stop()
-}
-
-var _ worker.Worker = (*temporalWorker)(nil)
-
-func (worker *temporalWorker) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
-	worker.w.RegisterWorkflowWithOptions(w, temp.RegisterOptions{
+func (tw *temporalWorker) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
+	tw.w.RegisterWorkflowWithOptions(w, temp.RegisterOptions{
 		Name: options.Name,
 		// Optional: Provides a Versioning Behavior to workflows of this type. It is required
 		// when WorkerOptions does not specify [DeploymentOptions.DefaultVersioningBehavior],
@@ -100,8 +125,8 @@ func (worker *temporalWorker) RegisterWorkflowWithOptions(w interface{}, options
 	})
 }
 
-func (worker *temporalWorker) RegisterActivityWithOptions(w interface{}, options worker.RegisterActivityOptions) {
-	worker.w.RegisterActivityWithOptions(w, tempactivity.RegisterOptions{
+func (tw *temporalWorker) RegisterActivityWithOptions(w interface{}, options worker.RegisterActivityOptions) {
+	tw.w.RegisterActivityWithOptions(w, tempactivity.RegisterOptions{
 		Name:                          options.Name,
 		SkipInvalidStructFunctions:    options.SkipInvalidStructFunctions,
 		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
@@ -165,14 +190,14 @@ func (w temporalWorkflow) GetInfo(ctx workflow.Context) workflow.IInfo {
 	}
 }
 
-func (w temporalWorkflow) ExecuteActivity(ctx workflow.Context, name string, args ...any) workflow.Future {
-	f := temp.ExecuteActivity(ctx.(temp.Context), name, args...)
+func (w temporalWorkflow) ExecuteActivity(ctx workflow.Context, activity interface{}, args ...interface{}) workflow.Future {
+	f := temp.ExecuteActivity(ctx.(temp.Context), activity, args...)
 	return &temporalFuture{f: f}
 }
 
-func (w temporalWorkflow) ExecuteChildWorkflow(ctx workflow.Context, name string, args ...any) workflow.Future {
+func (w temporalWorkflow) ExecuteChildWorkflow(ctx workflow.Context, name interface{}, args ...interface{}) workflow.ChildWorkflowFuture {
 	f := temp.ExecuteChildWorkflow(ctx.(temp.Context), name, args...)
-	return &temporalFuture{f: f}
+	return &temporalChildWorkflowFuture{cf: f}
 }
 
 func (w temporalWorkflow) WithValue(parent workflow.Context, key interface{}, val interface{}) workflow.Context {
@@ -248,24 +273,30 @@ func (w temporalWorkflow) NewFuture(ctx workflow.Context) (workflow.Future, work
 }
 
 func (w temporalWorkflow) SideEffect(ctx workflow.Context, f func(ctx workflow.Context) interface{}) encoded.Value {
-	//TODO implement me
-	panic("implement me")
+	return temp.SideEffect(ctx.(temp.Context), func(ctx temp.Context) interface{} {
+		return f(ctx)
+	})
 }
 
 func (w temporalWorkflow) Now(ctx workflow.Context) time.Time {
-	//TODO implement me
-	panic("implement me")
+	return temp.Now(ctx.(temp.Context))
 }
 
 func (w temporalWorkflow) Sleep(ctx workflow.Context, d time.Duration) (err error) {
-	//TODO implement me
-	panic("implement me")
+	return temp.Sleep(ctx.(temp.Context), d)
 }
 
-func newClient(location string, namespace string) (client.Client, error) {
+func (w temporalWorkflow) Go(ctx workflow.Context, f func(ctx workflow.Context)) {
+	temp.Go(ctx.(temp.Context), func(ctx temp.Context) {
+		f(ctx)
+	})
+}
+
+func NewClient(location string, namespace string) (client.Client, error) {
 	options := client.Options{
-		HostPort:  location,
-		Namespace: namespace,
+		HostPort:      location,
+		Namespace:     namespace,
+		DataConverter: temstar.DataConverter{},
 	}
 
 	// Use NewLazyClient to create a lazy-initialized client

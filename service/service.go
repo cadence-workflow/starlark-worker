@@ -4,7 +4,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	extcadence "github.com/cadence-workflow/starlark-worker/cad"
+	"github.com/cadence-workflow/starlark-worker/commons"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -96,11 +96,11 @@ func (r *Service) Run(
 		environ = &starlark.Dict{}
 	}
 
-	ao := extcadence.DefaultActivityOptions
+	ao := commons.DefaultActivityOptions
 	ao.TaskList = r.ClientTaskList
 	ctx = r.workflow.WithActivityOptions(ctx, ao)
 
-	cwo := extcadence.DefaultChildWorkflowOptions
+	cwo := commons.DefaultChildWorkflowOptions
 	cwo.TaskList = r.ClientTaskList
 	ctx = r.workflow.WithChildOptions(ctx, cwo)
 
@@ -242,8 +242,6 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 }
 
 func (r *Service) Register(s backend.Backend, url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
-	wf := s.RegisterWorkflow()
-	workflow.RegisterBackend(wf)
 	w := s.RegisterWorker(url, domain, taskList, logger)
 	w.RegisterWorkflow(r.Run)
 	for _, plugin := range r.Plugins {

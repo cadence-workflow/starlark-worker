@@ -66,48 +66,6 @@ type ChildWorkflowOptions struct {
 	// ParentClosePolicy - Optional policy to decide what to do for the child.
 	// Default is Terminate (if onboarded to this feature)
 	ParentClosePolicy int
-
-	// Bugports allows opt-in enabling of older, possibly buggy behavior, primarily intended to allow temporarily
-	// emulating old behavior until a fix is deployed.
-	//
-	// Bugports are always deprecated and may be removed in future versions.
-	// Generally speaking they will *likely* remain in place for one minor version, and then they may be removed to
-	// allow cleaning up the additional code complexity that they cause.
-	//
-	// Deprecated: All bugports are always deprecated and may be removed at any time.
-	Bugports Bugports
-}
-type Bugports struct {
-	// StartChildWorkflowsOnCanceledContext allows emulating older, buggy behavior that existed prior to v0.18.4.
-	//
-	// Prior to the fix, child workflows would be started and keep running when their context was canceled in two
-	// situations:
-	// 1) when the context was canceled before ExecuteChildWorkflow is called, and
-	// 2) when the context was canceled after ExecuteChildWorkflow but before the child workflow was started.
-	//
-	// 1 is unfortunately easy to trigger, though many workflows will encounter an error earlier and not reach the
-	// child-workflow-executing code.  2 is expected to be very rare in practice.
-	//
-	// To permanently emulate old behavior, use a disconnected context when starting child workflows, and
-	// cancel it only after `childfuture.GetWorkflowExecution().Get(...)` returns.  This can be used when this flag
-	// is removed in the future.
-	//
-	// If you have currently-broken workflows and need to repair them, there are two primary options:
-	//
-	// 1: Check the BinaryChecksum value of your new deploy and/or of the decision that is currently failing
-	// workflows.  Then set this flag when replaying history on those not-fixed checksums.  Concretely, this means
-	// checking both `workflow.GetInfo(ctx).BinaryChecksum` (note that sufficiently old clients may not have
-	// recorded a value, and it may be nil) and `workflow.IsReplaying(ctx)`.
-	//
-	// 2: Reset broken workflows back to either before the buggy behavior was recorded, or before the fixed behavior
-	// was deployed.  A "bad binary" reset type can do the latter in bulk, see the CLI's
-	// `cadence workflow reset-batch --reset_type BadBinary --help` for details.  For the former, check the failing
-	// histories, identify the point at which the bug occurred, and reset to prior to that decision task.
-	//
-	// Added in 0.18.4, this may be removed in or after v0.19.0, so please migrate off of it ASAP.
-	//
-	// Deprecated: All bugports are always deprecated and may be removed at any time.
-	StartChildWorkflowsOnCanceledContext bool
 }
 
 type RetryPolicy struct {

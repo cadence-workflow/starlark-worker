@@ -130,7 +130,7 @@ func TestCodec(t *testing.T) {
 	})
 
 	t.Run("go-string", func(t *testing.T) {
-		// go workflow are not supported
+		// go interfaces are not supported
 		input := "abc"
 		_, err := Encode(input)
 		require.Error(t, err)

@@ -17,12 +17,6 @@ type Registry interface {
 	RegisterActivityWithOptions(a interface{}, options RegisterActivityOptions)
 }
 
-var backendWorker Registry
-
-func RegisterBackend(b Registry) {
-	backendWorker = b
-}
-
 type RegisterWorkflowOptions struct {
 	Name string
 	// Workflow type name is equal to function name instead of fully qualified name including function package.
@@ -35,42 +29,6 @@ type RegisterWorkflowOptions struct {
 	// [DeploymentOptions.DeploymentSeriesName] is set, and [UseBuildIDForVersioning] is true.
 	// NOTE: Experimental
 	VersioningBehavior int
-}
-
-func RegisterWorkflow(w interface{}) {
-	if backendWorker == nil {
-		panic("workflow backendWorker not registered")
-	}
-	backendWorker.RegisterWorkflow(w)
-}
-
-// RegisterWorkflowWithOptions registers the workflow function with options.
-// The user can use options to provide an external name for the workflow or leave it empty if no
-// external name is required. This can be used as
-//
-//	worker.RegisterWorkflowWithOptions(sampleWorkflow, RegisterWorkflowOptions{})
-//	worker.RegisterWorkflowWithOptions(sampleWorkflow, RegisterWorkflowOptions{Name: "foo"})
-//
-// This method panics if workflowFunc doesn't comply with the expected format or tries to register the same workflow
-// type name twice. Use workflow.RegisterOptions.DisableAlreadyRegisteredCheck to allow multiple registrations.
-func RegisterWorkflowWithOptions(w interface{}, options RegisterWorkflowOptions) {
-	if backendWorker == nil {
-		panic("workflow backendWorker not registered")
-	}
-	backendWorker.RegisterWorkflowWithOptions(w, options)
-}
-
-func RegisterActivity(a interface{}) {
-	if backendWorker == nil {
-		panic("workflow backendWorker not registered")
-	}
-	backendWorker.RegisterActivity(a)
-}
-func RegisterActivityWithOptions(a interface{}, options RegisterActivityOptions) {
-	if backendWorker == nil {
-		panic("workflow backendWorker not registered")
-	}
-	backendWorker.RegisterActivityWithOptions(a, options)
 }
 
 type RegisterActivityOptions struct {

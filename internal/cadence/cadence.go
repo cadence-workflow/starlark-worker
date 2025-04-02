@@ -1,11 +1,11 @@
 package cadence
 
 import (
+	"github.com/cadence-workflow/starlark-worker/cadstar"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
-	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 	"log"
 	"net/url"
+	"reflect"
 	"time"
 )
 
@@ -26,14 +27,13 @@ func GetBackend() backend.Backend {
 	return cadenceBackend{}
 }
 
-type cadenceBackend struct{}
-
-func (c cadenceBackend) RegisterWorkflow() workflow.Workflow {
-	return &cadenceWorkflow{}
+type cadenceBackend struct {
 }
 
+var _ backend.Backend = (*cadenceBackend)(nil)
+
 func (c cadenceBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
-	cadInterface := newInterface(url)
+	cadInterface := NewInterface(url)
 	worker := cadworker.New(
 		cadInterface,
 		domain,
@@ -41,7 +41,7 @@ func (c cadenceBackend) RegisterWorker(url string, domain string, taskList strin
 		cadworker.Options{
 			MetricsScope: tally.NoopScope,
 			Logger:       logger,
-			DataConverter: &service.DataConverter{
+			DataConverter: &cadstar.DataConverter{
 				Logger: logger,
 			},
 			ContextPropagators: []cad.ContextPropagator{
@@ -74,38 +74,62 @@ type cadenceWorker struct {
 	w cadworker.Worker
 }
 
-func (worker *cadenceWorker) RegisterWorkflow(w interface{}) {
-	worker.w.RegisterWorkflow(w)
+func (w *cadenceWorker) RegisterWorkflow(wf interface{}) {
+	originalFunc := reflect.ValueOf(wf)
+	originalType := originalFunc.Type()
+
+	if originalType.Kind() != reflect.Func || originalType.NumIn() == 0 {
+		panic("workflow function must be a function and have at least one argument (context)")
+	}
+
+	// Build a new function with the same signature but context converted to cadence.Context
+	wrappedFuncType := reflect.FuncOf(
+		append([]reflect.Type{reflect.TypeOf((*cad.Context)(nil)).Elem()}, worker.GetRemainingInTypes(originalType)...),
+		worker.GetOutTypes(originalType),
+		false,
+	)
+
+	wrappedFunc := reflect.MakeFunc(wrappedFuncType, func(args []reflect.Value) []reflect.Value {
+		// Replace cadence.Context with workflow.Context for original call
+		newArgs := make([]reflect.Value, len(args))
+		newArgs[0] = args[0].Convert(reflect.TypeOf((*cad.Context)(nil)).Elem()) // keep as cadence.Context
+		for i := 1; i < len(args); i++ {
+			newArgs[i] = args[i]
+		}
+		return originalFunc.Call(newArgs)
+	})
+
+	w.w.RegisterWorkflow(wrappedFunc.Interface())
 }
 
-func (worker *cadenceWorker) RegisterActivity(a interface{}) {
-	worker.w.RegisterActivity(a)
+func (w *cadenceWorker) RegisterActivity(a interface{}) {
+	w.w.RegisterActivity(a)
 }
 
-func (worker *cadenceWorker) Start() error {
-	return worker.w.Start()
+func (w *cadenceWorker) Start() error {
+	return w.w.Start()
 }
 
-func (worker *cadenceWorker) Run(_ <-chan interface{}) error {
-	return worker.w.Run()
+func (w *cadenceWorker) Run(_ <-chan interface{}) error {
+	return w.w.Run()
 }
 
-func (worker *cadenceWorker) Stop() {
-	worker.w.Stop()
+func (w *cadenceWorker) Stop() {
+	w.w.Stop()
 }
 
 var _ worker.Worker = (*cadenceWorker)(nil)
 
-func (worker *cadenceWorker) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
-	worker.w.RegisterWorkflowWithOptions(w, cad.RegisterOptions{
+func (w *cadenceWorker) RegisterWorkflowWithOptions(runFunc interface{}, options worker.RegisterWorkflowOptions) {
+	w.w.RegisterWorkflowWithOptions(runFunc, cad.RegisterOptions{
 		Name:                          options.Name,
 		EnableShortName:               options.EnableShortName,
 		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
 	})
 }
 
-func (worker *cadenceWorker) RegisterActivityWithOptions(w interface{}, options worker.RegisterActivityOptions) {
-	worker.w.RegisterActivityWithOptions(w, cadactivity.RegisterOptions{
+func (w *cadenceWorker) RegisterActivityWithOptions(runFunc interface{}, options worker.RegisterActivityOptions) {
+	w.w.RegisterActivityWithOptions(runFunc, cadactivity.RegisterOptions{
 		Name:                          options.Name,
 		EnableShortName:               options.EnableShortName,
 		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
@@ -268,8 +292,9 @@ func (w cadenceWorkflow) NewFuture(ctx workflow.Context) (workflow.Future, workf
 }
 
 func (w cadenceWorkflow) Go(ctx workflow.Context, f func(ctx workflow.Context)) {
-	//TODO implement me
-	panic("implement me")
+	cad.Go(ctx.(cad.Context), func(c cad.Context) {
+		f(ctx)
+	})
 }
 
 func (w cadenceWorkflow) SideEffect(ctx workflow.Context, f func(ctx workflow.Context) interface{}) encoded.Value {
@@ -286,7 +311,7 @@ func (w cadenceWorkflow) Sleep(ctx workflow.Context, d time.Duration) (err error
 	return cad.Sleep(ctx.(cad.Context), d)
 }
 
-func newInterface(location string) workflowserviceclient.Interface {
+func NewInterface(location string) workflowserviceclient.Interface {
 	loc, err := url.Parse(location)
 	if err != nil {
 		log.Fatalln(err)
