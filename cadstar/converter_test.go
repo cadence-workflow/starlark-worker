@@ -1,4 +1,4 @@
-package service
+package cadstar
 
 import (
 	"github.com/stretchr/testify/require"
