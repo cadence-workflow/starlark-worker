@@ -2,7 +2,7 @@ package atexit
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
 )
@@ -27,16 +27,16 @@ var builtins = map[string]*starlark.Builtin{
 var properties = map[string]star.PropertyFactory{}
 
 func register(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	ctx := cadstar.GetContext(t)
+	ctx := service.GetContext(t)
 	fn := args[0].(starlark.Callable)
 	args = args[1:]
-	cadstar.GetExitHooks(ctx).Register(fn, args, kwargs)
+	service.GetExitHooks(ctx).Register(fn, args, kwargs)
 	return starlark.None, nil
 }
 
 func unregister(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
-	ctx := cadstar.GetContext(t)
+	ctx := service.GetContext(t)
 	fn := args[0].(starlark.Callable)
-	cadstar.GetExitHooks(ctx).Unregister(fn)
+	service.GetExitHooks(ctx).Unregister(fn)
 	return starlark.None, nil
 }

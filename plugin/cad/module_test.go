@@ -1,23 +1,23 @@
 package cad
 
 import (
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
 
 type Test struct {
 	suite.Suite
-	cadstar.StarTestSuite
-	env *cadstar.StarTestEnvironment
+	service.StarTestSuite
+	env *service.StarTestEnvironment
 }
 
 func TestSuite(t *testing.T) { suite.Run(t, new(Test)) }
 
 func (r *Test) SetupTest() {
-	r.env = r.NewEnvironment(r.T(), &cadstar.StarTestEnvironmentParams{
+	r.env = r.NewEnvironment(r.T(), &service.StarTestEnvironmentParams{
 		RootDirectory: "testdata",
-		Plugins:       map[string]cadstar.IPlugin{Plugin.ID(): Plugin},
+		Plugins:       map[string]service.IPlugin{Plugin.ID(): Plugin},
 	})
 }
 

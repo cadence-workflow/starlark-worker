@@ -3,9 +3,9 @@ package main_test
 import (
 	"errors"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/plugin"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
 	"go.uber.org/cadence"
@@ -19,10 +19,10 @@ import (
 
 type Suite struct {
 	suite.Suite
-	cadstar.StarTestSuite
+	service.StarTestSuite
 	httpHandler ext.HTTPTestHandler
 	server      *httptest.Server
-	env         *cadstar.StarTestEnvironment
+	env         *service.StarTestEnvironment
 }
 
 func TestIT(t *testing.T) { suite.Run(t, new(Suite)) }
@@ -33,7 +33,7 @@ func (r *Suite) SetupSuite() {
 }
 
 func (r *Suite) SetupTest() {
-	r.env = r.NewEnvironment(r.T(), &cadstar.StarTestEnvironmentParams{
+	r.env = r.NewEnvironment(r.T(), &service.StarTestEnvironmentParams{
 		RootDirectory: ".",
 		Plugins:       plugin.Registry,
 	})

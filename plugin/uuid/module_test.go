@@ -3,10 +3,10 @@ package uuid
 import (
 	"testing"
 
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/starlark"
 	"go.uber.org/cadence/testsuite"
-	"go.uber.org/cadence/workflow"
 )
 
 // Test the uuid4 function

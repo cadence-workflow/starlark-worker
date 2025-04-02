@@ -2,11 +2,11 @@ package uuid
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	_uuid "github.com/google/uuid"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 )
 
@@ -29,15 +29,16 @@ var builtins = map[string]*starlark.Builtin{
 var properties = map[string]star.PropertyFactory{}
 
 func uuid4(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	ctx := cadstar.GetContext(t)
-	logger := workflow.GetLogger(ctx)
+	ctx := service.GetContext(t)
+	w := service.GetWorkflow(t)
+	logger := w.GetLogger(ctx)
 
 	if err := starlark.UnpackArgs("uuid4", args, kwargs); err != nil {
 		logger.Error("error", zap.Error(err))
 		return nil, err
 	}
 
-	_stringUUID := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
+	_stringUUID := w.SideEffect(ctx, func(ctx workflow.Context) any {
 		return _uuid.New().String()
 	})
 	var stringUUID starlark.String

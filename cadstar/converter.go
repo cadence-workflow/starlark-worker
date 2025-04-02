@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"github.com/cadence-workflow/starlark-worker/ext"
+	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/star"
 	jsoniter "github.com/json-iterator/go"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/encoded"
 	"go.uber.org/zap"
 	"io"
 )
@@ -20,7 +20,7 @@ type DataConverter struct {
 	Logger *zap.Logger
 }
 
-var _ encoded.DataConverter = (*DataConverter)(nil)
+var _ encoded.DataConvertor = (*DataConverter)(nil)
 
 func (s *DataConverter) ToData(values ...any) ([]byte, error) {
 	if len(values) == 1 {

@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -31,8 +31,9 @@ var builtins = map[string]*starlark.Builtin{
 var properties = map[string]star.PropertyFactory{}
 
 func _do(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	ctx := cadstar.GetContext(t)
-	logger := workflow.GetLogger(ctx)
+	ctx := service.GetContext(t)
+	w := service.GetWorkflow(t)
+	logger := w.GetLogger(ctx)
 
 	var method starlark.String
 	var url starlark.String
@@ -45,7 +46,7 @@ func _do(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []
 	}
 	var err error
 	var res *http.Response
-	future := workflow.ExecuteActivity(ctx, Activities.Do, method, url, headers, body)
+	future := w.ExecuteActivity(ctx, Activities.Do, method, url, headers, body)
 	if res, err = getResponse(ctx, future); err != nil {
 		logger.Error("error", zap.Error(err))
 		return nil, err
