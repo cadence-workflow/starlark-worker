@@ -70,7 +70,7 @@ func (r *Service) Run(
 
 	ctx = workflow.WithBackend(ctx, r.workflow)
 
-	logger := r.workflow.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -95,11 +95,11 @@ func (r *Service) Run(
 
 	ao := DefaultActivityOptions
 	ao.TaskList = r.ClientTaskList
-	ctx = r.workflow.WithActivityOptions(ctx, ao)
+	ctx = workflow.WithActivityOptions(ctx, ao)
 
 	cwo := DefaultChildWorkflowOptions
 	cwo.TaskList = r.ClientTaskList
-	ctx = r.workflow.WithChildOptions(ctx, cwo)
+	ctx = workflow.WithChildOptions(ctx, cwo)
 
 	globals := &_Globals{
 		exitHooks:  &ExitHooks{},
@@ -109,7 +109,7 @@ func (r *Service) Run(
 		progress:   list.New(),
 		plugins:    r.Plugins,
 	}
-	ctx = r.workflow.WithValue(ctx, contextKeyGlobals, globals)
+	ctx = workflow.WithValue(ctx, contextKeyGlobals, globals)
 
 	var fs star.FS
 	if fs, err = star.NewTarFS(tar); err != nil {
@@ -140,7 +140,7 @@ func (r *Service) Run(
 	}
 
 	runInfo := RunInfo{
-		Info:    r.workflow.GetInfo(ctx),
+		Info:    workflow.GetInfo(ctx),
 		Environ: environ,
 	}
 
@@ -149,7 +149,7 @@ func (r *Service) Run(
 		plugins[pID] = p.Create(runInfo)
 	}
 
-	if err := r.workflow.SetQueryHandler(ctx, "logs", func() (any, error) {
+	if err := workflow.SetQueryHandler(ctx, "logs", func() (any, error) {
 		logs := make([]any, globals.logs.Len())
 		var i int
 		for e := globals.logs.Front(); e != nil; e = e.Next() {
@@ -162,7 +162,7 @@ func (r *Service) Run(
 		return nil, err
 	}
 
-	if err := r.workflow.SetQueryHandler(ctx, "task_progress", func() (any, error) {
+	if err := workflow.SetQueryHandler(ctx, "task_progress", func() (any, error) {
 		progress := make([]any, globals.progress.Len())
 		var i int
 		for e := globals.progress.Front(); e != nil; e = e.Next() {
@@ -198,13 +198,13 @@ func (r *Service) Run(
 	err = r.processError(ctx, err)
 
 	if err != nil {
-		exec := r.workflow.GetInfo(ctx)
+		exec := workflow.GetInfo(ctx)
 		tags := map[string]string{
 			"w_id":   exec.ExecutionID(),
 			"run_id": exec.RunID(),
 			"error":  err.Error(),
 		}
-		r.workflow.GetMetricsScope(ctx).Tagged(tags).Gauge("workflow.error").Update(1)
+		workflow.GetMetricsScope(ctx).Tagged(tags).Gauge("workflow.error").Update(1)
 	}
 	logger.Info("workflow-end")
 	return res, err
@@ -214,7 +214,7 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	logger := r.workflow.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	details := map[string]any{"error": err.Error()}
 	var evalErr *starlark.EvalError
@@ -241,6 +241,7 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 func (r *Service) Register(s backend.Backend, url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
 	w := s.RegisterWorker(url, domain, taskList, logger)
 	w.RegisterWorkflow(r.Run)
+	r.workflow = s.RegisterWorkflow()
 	for _, plugin := range r.Plugins {
 		plugin.Register(w)
 	}

@@ -29,6 +29,10 @@ func GetBackend() backend.Backend {
 type cadenceBackend struct {
 }
 
+func (c cadenceBackend) RegisterWorkflow() workflow.Workflow {
+	return &cadenceWorkflow{}
+}
+
 var _ backend.Backend = (*cadenceBackend)(nil)
 
 func (c cadenceBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
@@ -73,7 +77,7 @@ type cadenceWorker struct {
 	w cadworker.Worker
 }
 
-func (w *cadenceWorker) RegisterWorkflow(wf interface{}) {
+func UpdateWorkflowFunctionContextArgument(wf interface{}) interface{} {
 	originalFunc := reflect.ValueOf(wf)
 	originalType := originalFunc.Type()
 
@@ -98,7 +102,11 @@ func (w *cadenceWorker) RegisterWorkflow(wf interface{}) {
 		return originalFunc.Call(newArgs)
 	})
 
-	w.w.RegisterWorkflow(wrappedFunc.Interface())
+	return wrappedFunc.Interface()
+}
+
+func (w *cadenceWorker) RegisterWorkflow(wf interface{}) {
+	w.w.RegisterWorkflow(UpdateWorkflowFunctionContextArgument(wf))
 }
 
 func (w *cadenceWorker) RegisterActivity(a interface{}) {

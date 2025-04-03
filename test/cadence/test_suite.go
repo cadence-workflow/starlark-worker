@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
+	"github.com/cadence-workflow/starlark-worker/internal/cadence"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
@@ -44,7 +45,7 @@ func (r *StarTestEnvironment) ExecuteFunction(
 	environ *starlark.Dict,
 ) {
 	env := r.env
-	env.ExecuteWorkflow(r.service.Run, r.tar, filePath, fn, args, kw, environ)
+	env.ExecuteWorkflow(cadence.UpdateWorkflowFunctionContextArgument(r.service.Run), r.tar, filePath, fn, args, kw, environ)
 }
 
 func (r *StarTestEnvironment) GetResult(valuePtr any) error {

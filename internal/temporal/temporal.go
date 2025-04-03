@@ -25,6 +25,10 @@ var _ backend.Backend = (*temporalBackend)(nil)
 
 type temporalBackend struct{}
 
+func (c temporalBackend) RegisterWorkflow() workflow.Workflow {
+	return &temporalWorkflow{}
+}
+
 func (c temporalBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
 	client, err := NewClient(url, domain)
 	if err != nil {
