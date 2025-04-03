@@ -9,15 +9,9 @@ type Activity interface {
 	GetLogger(ctx workflow.Context) *zap.Logger
 }
 
-var backend Activity
-
-func RegisterBackend(b Activity) {
-	backend = b
-}
-
 func GetLogger(ctx workflow.Context) *zap.Logger {
-	if backend == nil {
-		panic("workflow backend not registered")
+	if b, ok := workflow.GetBackend(ctx); ok {
+		return b.GetLogger(ctx)
 	}
-	return backend.GetLogger(ctx)
+	return nil
 }

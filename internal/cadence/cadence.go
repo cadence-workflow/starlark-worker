@@ -1,7 +1,6 @@
 package cadence
 
 import (
-	"github.com/cadence-workflow/starlark-worker/cadstar"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -41,7 +40,7 @@ func (c cadenceBackend) RegisterWorker(url string, domain string, taskList strin
 		cadworker.Options{
 			MetricsScope: tally.NoopScope,
 			Logger:       logger,
-			DataConverter: &cadstar.DataConverter{
+			DataConverter: &DataConverter{
 				Logger: logger,
 			},
 			ContextPropagators: []cad.ContextPropagator{

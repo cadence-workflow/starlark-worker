@@ -10,6 +10,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/uber-go/tally v3.5.10+incompatible
 	go.starlark.net v0.0.0-20241125201518-c05ff208a98f
+	go.temporal.io/api v1.46.0
 	go.temporal.io/sdk v1.33.0
 	go.uber.org/cadence v1.2.9
 	go.uber.org/multierr v1.11.0
@@ -55,7 +56,6 @@ require (
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	github.com/uber/tchannel-go v1.34.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	go.temporal.io/api v1.46.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/net/metrics v1.4.0 // indirect
 	go.uber.org/thriftrw v1.32.0 // indirect

@@ -3,15 +3,18 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/cadence-workflow/starlark-worker/test/cadence"
 	"testing"
 
-	"github.com/cadence-workflow/starlark-worker/star"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/activity"
-	"go.uber.org/cadence/worker"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+
+	"github.com/cadence-workflow/starlark-worker/internal/activity"
+	"github.com/cadence-workflow/starlark-worker/internal/worker"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/star"
+	//"github.com/cadence-workflow/starlark-worker/test/cadence"
 )
 
 type TestPlugin struct{}
@@ -29,7 +32,7 @@ func (t *TestPlugin) Create(_ RunInfo) starlark.Value {
 }
 
 func (t *TestPlugin) Register(registry worker.Registry) {
-	registry.RegisterActivityWithOptions(stringifyActivity, activity.RegisterOptions{Name: "stringify_activity"})
+	registry.RegisterActivityWithOptions(stringifyActivity, worker.RegisterActivityOptions{Name: "stringify_activity"})
 }
 
 func stringifyActivityWrapper(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -69,8 +72,8 @@ var testBuiltins = map[string]*starlark.Builtin{
 
 type Test struct {
 	suite.Suite
-	StarTestSuite
-	env *StarTestEnvironment
+	cadence.StarTestSuite
+	env *cadence.StarTestEnvironment
 }
 
 func TestSuite(t *testing.T) { suite.Run(t, new(Test)) }
@@ -79,7 +82,7 @@ func (r *Test) SetupSuite() {}
 
 func (r *Test) SetupTest() {
 	tp := &TestPlugin{}
-	r.env = r.NewEnvironment(r.T(), &StarTestEnvironmentParams{
+	r.env = r.NewEnvironment(r.T(), &cadence.StarTestEnvironmentParams{
 		RootDirectory: "testdata",
 		Plugins:       map[string]IPlugin{tp.ID(): tp},
 	})

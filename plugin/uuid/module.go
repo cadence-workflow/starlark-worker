@@ -30,15 +30,14 @@ var properties = map[string]star.PropertyFactory{}
 
 func uuid4(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	w := service.GetWorkflow(t)
-	logger := w.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	if err := starlark.UnpackArgs("uuid4", args, kwargs); err != nil {
 		logger.Error("error", zap.Error(err))
 		return nil, err
 	}
 
-	_stringUUID := w.SideEffect(ctx, func(ctx workflow.Context) any {
+	_stringUUID := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
 		return _uuid.New().String()
 	})
 	var stringUUID starlark.String

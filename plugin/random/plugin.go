@@ -2,7 +2,7 @@ package random
 
 import (
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"go.starlark.net/starlark"
 )
 
@@ -14,13 +14,13 @@ var Plugin = &plugin{}
 
 type plugin struct{}
 
-var _ workflow.IPlugin = (*plugin)(nil)
+var _ service.IPlugin = (*plugin)(nil)
 
 func (r *plugin) ID() string {
 	return pluginID
 }
 
-func (r *plugin) Create(_ workflow.RunInfo) starlark.Value {
+func (r *plugin) Create(_ service.RunInfo) starlark.Value {
 	return NewModule()
 }
 

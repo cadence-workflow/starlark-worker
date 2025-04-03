@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	cadenceclient "github.com/cadence-workflow/starlark-worker/cadence_client"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	cadenceclient "github.com/cadence-workflow/starlark-worker/client/cadence_client"
 	"github.com/cadence-workflow/starlark-worker/internal/cadence"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"github.com/uber-go/tally"
@@ -210,7 +209,7 @@ func __run__(_args []string) {
 	cadenceInterface := cadence.NewInterface(cadenceEndpoint)
 	cadenceCli := client.NewClient(cadenceInterface, domain, &client.Options{
 		MetricsScope: tally.NoopScope,
-		DataConverter: &cadstar.DataConverter{
+		DataConverter: &cadence.DataConverter{
 			Logger: logger,
 		},
 	})

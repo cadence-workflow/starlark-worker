@@ -37,7 +37,7 @@ type _Globals struct {
 	logs       *list.List
 	environ    *starlark.Dict
 	progress   *list.List
-	plugins    map[string]workflow.IPlugin
+	plugins    map[string]IPlugin
 }
 
 func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
@@ -52,7 +52,7 @@ func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
 }
 
 type Service struct {
-	Plugins        map[string]workflow.IPlugin
+	Plugins        map[string]IPlugin
 	ClientTaskList string
 
 	workflow workflow.Workflow
@@ -72,6 +72,8 @@ func (r *Service) Run(
 	res starlark.Value,
 	err error,
 ) {
+
+	ctx = workflow.WithBackend(ctx, r.workflow)
 
 	logger := r.workflow.GetLogger(ctx)
 
@@ -142,7 +144,7 @@ func (r *Service) Run(
 		function = meta.MainFunction
 	}
 
-	runInfo := workflow.RunInfo{
+	runInfo := RunInfo{
 		Info:    r.workflow.GetInfo(ctx),
 		Environ: environ,
 	}
@@ -178,7 +180,7 @@ func (r *Service) Run(
 		return nil, err
 	}
 
-	t := CreateThread(ctx, r.workflow)
+	t := CreateThread(ctx)
 	t.Load = star.ThreadLoad(fs, builtins, map[string]starlark.StringDict{"plugin": plugins})
 
 	// Run main user code
@@ -188,7 +190,7 @@ func (r *Service) Run(
 		var canceledError *cadence.CanceledError
 		if errors.As(err, &canceledError) {
 			globals.isCanceled = true
-			ctx, _ = r.workflow.NewDisconnectedContext(ctx)
+			ctx, _ = workflow.NewDisconnectedContext(ctx)
 		}
 	}
 

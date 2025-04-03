@@ -29,12 +29,11 @@ var properties = map[string]star.PropertyFactory{}
 
 func run(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	var ctx = service.GetContext(t)
-	var w = service.GetWorkflow(t)
-	future, settable := w.NewFuture(ctx)
+	future, settable := workflow.NewFuture(ctx)
 	fn := args[0]
 	args = args[1:]
-	w.Go(ctx, func(ctx workflow.Context) {
-		subT := service.CreateThread(ctx, w)
+	workflow.Go(ctx, func(ctx workflow.Context) {
+		subT := service.CreateThread(ctx)
 		settable.Set(starlark.Call(subT, fn, args, kwargs))
 	})
 	return &cad.Future{Future: future}, nil

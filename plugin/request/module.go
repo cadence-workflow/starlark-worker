@@ -32,8 +32,7 @@ var properties = map[string]star.PropertyFactory{}
 
 func _do(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	w := service.GetWorkflow(t)
-	logger := w.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	var method starlark.String
 	var url starlark.String
@@ -46,7 +45,7 @@ func _do(t *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []
 	}
 	var err error
 	var res *http.Response
-	future := w.ExecuteActivity(ctx, Activities.Do, method, url, headers, body)
+	future := workflow.ExecuteActivity(ctx, Activities.Do, method, url, headers, body)
 	if res, err = getResponse(ctx, future); err != nil {
 		logger.Error("error", zap.Error(err))
 		return nil, err

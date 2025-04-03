@@ -3,36 +3,67 @@ package uuid
 import (
 	"testing"
 
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/testsuite"
+	tsuite "go.temporal.io/sdk/testsuite"
+	temp "go.temporal.io/sdk/workflow"
+	csuite "go.uber.org/cadence/testsuite"
+	cad "go.uber.org/cadence/workflow"
 )
 
-// Test the uuid4 function
-func TestUUID4(t *testing.T) {
-	// Setup Cadence test environment
-	suite := &testsuite.WorkflowTestSuite{}
-	env := suite.NewTestWorkflowEnvironment()
+// Define a type for workflow execution context
+type workflowExecutor func(t *testing.T)
 
-	env.ExecuteWorkflow(func(ctx workflow.Context) error {
-		// Create a new thread for starlark execution
-		thread := &starlark.Thread{Name: "test-thread"}
+func TestUUID4_TableDriven(t *testing.T) {
+	tests := []struct {
+		name     string
+		executor workflowExecutor
+	}{
+		{
+			name: "Cadence",
+			executor: func(t *testing.T) {
+				suite := &csuite.WorkflowTestSuite{}
+				env := suite.NewTestWorkflowEnvironment()
 
-		// Call the uuid4 function
-		result, err := uuid4(thread, nil, nil, nil)
+				env.ExecuteWorkflow(func(ctx cad.Context) error {
+					thread := &starlark.Thread{Name: "test-thread"}
+					result, err := uuid4(thread, nil, nil, nil)
 
-		// Using testify/require to ensure the result and error are as expected
-		require.NoError(t, err, "Expected no error from uuid4")
+					require.NoError(t, err, "Expected no error from uuid4")
+					uuidObj, ok := result.(*UUID)
+					require.True(t, ok, "Expected result to be of type *UUID")
+					require.NotEmpty(t, string(uuidObj.StringUUID), "UUID should not be empty")
 
-		// Check if the result is of type *UUID and not empty string
-		uuidObj, ok := result.(*UUID)
-		require.True(t, ok, "Expected result to be of type *UUID")
-		require.NotEmpty(t, string(uuidObj.StringUUID), "UUID should not be empty")
+					return nil
+				})
 
-		return nil
-	})
+				env.AssertExpectations(t)
+			},
+		},
+		{
+			name: "Temporal",
+			executor: func(t *testing.T) {
+				suite := &tsuite.WorkflowTestSuite{}
+				env := suite.NewTestWorkflowEnvironment()
 
-	// Assert that all expectations are met
-	env.AssertExpectations(t)
+				env.ExecuteWorkflow(func(ctx temp.Context) error {
+					thread := &starlark.Thread{Name: "test-thread"}
+					result, err := uuid4(thread, nil, nil, nil)
+
+					require.NoError(t, err, "Expected no error from uuid4")
+					uuidObj, ok := result.(*UUID)
+					require.True(t, ok, "Expected result to be of type *UUID")
+					require.NotEmpty(t, string(uuidObj.StringUUID), "UUID should not be empty")
+
+					return nil
+				})
+
+				env.AssertExpectations(t)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, tt.executor)
+	}
 }

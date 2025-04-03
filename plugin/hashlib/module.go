@@ -3,6 +3,7 @@ package hashlib
 import (
 	"fmt"
 
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
@@ -36,8 +37,7 @@ var builtins = map[string]*starlark.Builtin{
 // Return: The calculated hash value
 func blake2b_hex(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	w := service.GetWorkflow(t)
-	logger := w.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	var data string
 	var digestSize int

@@ -1,0 +1,13 @@
+{
+    "type": "catalog",
+    "items": [
+        {
+            "id": 100,
+            "alias": "foo"
+        },
+        {
+            "id": 101,
+            "alias": "bar"
+        }
+    ]
+}

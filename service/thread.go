@@ -9,14 +9,13 @@ import (
 )
 
 const (
-	threadLocalContextKey  = "context"
-	threadLocalWorkflowKey = "workflow"
-	envLogLen              = starlark.String("STAR_CORE_LOG_LEN")
-	defaultLogLen          = 1000
+	threadLocalContextKey = "context"
+	envLogLen             = starlark.String("STAR_CORE_LOG_LEN")
+	defaultLogLen         = 1000
 )
 
-func CreateThread(ctx workflow.Context, w workflow.Workflow) *starlark.Thread {
-	logger := w.GetLogger(ctx)
+func CreateThread(ctx workflow.Context) *starlark.Thread {
+	logger := workflow.GetLogger(ctx)
 	globals := getGlobals(ctx)
 
 	ll := defaultLogLen
@@ -39,19 +38,13 @@ func CreateThread(ctx workflow.Context, w workflow.Workflow) *starlark.Thread {
 		},
 	}
 	t.SetLocal(threadLocalContextKey, ctx)
-	t.SetLocal(threadLocalWorkflowKey, w)
 	return t
 }
 
 func GetContext(t *starlark.Thread) workflow.Context {
 	ctx := t.Local(threadLocalContextKey).(workflow.Context)
 	if getGlobals(ctx).isCanceled {
-		w := GetWorkflow(t)
-		ctx, _ = w.NewDisconnectedContext(ctx)
+		ctx, _ = workflow.NewDisconnectedContext(ctx)
 	}
 	return ctx
-}
-
-func GetWorkflow(t *starlark.Thread) workflow.Workflow {
-	return t.Local(threadLocalWorkflowKey).(workflow.Workflow)
 }

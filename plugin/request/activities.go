@@ -37,7 +37,7 @@ type JSONRequest struct {
 	Assert  Assert              `json:"assert,omitempty"`
 }
 
-func (r *activities) DoJSON(ctx context.Context, w workflow.Workflow, request JSONRequest) (any, error) {
+func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("activity-start", zap.Any("request", request))
 
@@ -56,7 +56,7 @@ func (r *activities) DoJSON(ctx context.Context, w workflow.Workflow, request JS
 	if request.Body != nil {
 		if bb, err = jsoniter.Marshal(request.Body); err != nil {
 			logger.Error("activity-error", ext.ZapError(err)...)
-			return nil, w.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
+			return nil, workflow.NewCustomError(ctx, yarpcerrors.CodeInvalidArgument.String(), err.Error())
 		}
 	}
 
@@ -78,7 +78,7 @@ func (r *activities) DoJSON(ctx context.Context, w workflow.Workflow, request JS
 
 	if req, err = createRequest(ctx, request.Method, request.URL, header, bb); err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, w.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
+		return nil, workflow.NewCustomError(ctx, yarpcerrors.CodeInvalidArgument.String(), err.Error())
 	}
 
 	if res, err = r.client.Do(req); err != nil {
@@ -92,7 +92,7 @@ func (r *activities) DoJSON(ctx context.Context, w workflow.Workflow, request JS
 			)
 		}
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, w.NewCustomError(yarpcerrors.CodeUnknown.String(), err.Error())
+		return nil, workflow.NewCustomError(ctx, yarpcerrors.CodeUnknown.String(), err.Error())
 	}
 
 	var expectedStatusCode = false
@@ -105,7 +105,7 @@ func (r *activities) DoJSON(ctx context.Context, w workflow.Workflow, request JS
 	if !expectedStatusCode {
 		details := fmt.Sprintf("bad http response status code: expected: %v, got: %d", request.Assert.StatusCodes, res.StatusCode)
 		logger.Error("activity-error", zap.String("details", details))
-		return nil, w.NewCustomError(strconv.Itoa(res.StatusCode), details)
+		return nil, workflow.NewCustomError(ctx, strconv.Itoa(res.StatusCode), details)
 	}
 
 	var _res any
@@ -113,14 +113,14 @@ func (r *activities) DoJSON(ctx context.Context, w workflow.Workflow, request JS
 		logger.Error("activity-error", ext.ZapError(err)...)
 		code := "400" // bad-request https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
 		details := fmt.Sprintf("http response body is not a json: %s", err.Error())
-		return nil, w.NewCustomError(code, details)
+		return nil, workflow.NewCustomError(ctx, code, details)
 	}
 
 	if request.Assert.Path != "" {
 		value, err := ext.JP[any](_res, request.Assert.Path)
 		if err != nil {
 			// 412 - precondition-failed https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/412
-			return nil, w.NewCustomError("412", _res)
+			return nil, workflow.NewCustomError(ctx, "412", _res)
 		}
 		if request.Assert.Value != nil {
 			var found bool
@@ -132,7 +132,7 @@ func (r *activities) DoJSON(ctx context.Context, w workflow.Workflow, request JS
 			}
 			if !found {
 				// 412 - precondition-failed https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/412
-				return nil, w.NewCustomError("412", _res)
+				return nil, workflow.NewCustomError(ctx, "412", _res)
 			}
 		}
 	}
@@ -156,7 +156,7 @@ func (r *activities) Do(
 	)
 	if req, err := createRequest(ctx, method, url, headers, body); err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, w.NewCustomError(yarpcerrors.CodeInvalidArgument.String(), err.Error())
+		return nil, workflow.NewCustomError(ctx, yarpcerrors.CodeInvalidArgument.String(), err.Error())
 	} else {
 		return do(ctx, w, r.client, req)
 	}

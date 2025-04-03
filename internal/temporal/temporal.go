@@ -5,7 +5,6 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
-	"github.com/cadence-workflow/starlark-worker/temstar"
 	"github.com/uber-go/tally"
 	tempactivity "go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
@@ -296,9 +295,9 @@ func NewClient(location string, namespace string) (client.Client, error) {
 	options := client.Options{
 		HostPort:      location,
 		Namespace:     namespace,
-		DataConverter: temstar.DataConverter{},
+		DataConverter: DataConverter{},
 	}
 
 	// Use NewLazyClient to create a lazy-initialized client
-	return client.NewLazyClient(options)
+	return client.Dial(options)
 }

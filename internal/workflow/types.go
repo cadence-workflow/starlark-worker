@@ -173,3 +173,8 @@ type Future interface {
 	// IsReady will return true Get is guaranteed to not block.
 	IsReady() bool
 }
+
+type IInfo interface {
+	ExecutionID() string
+	RunID() string
+}

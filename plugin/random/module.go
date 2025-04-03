@@ -43,8 +43,7 @@ func (m *Module) AttrNames() []string                   { return ext.SortedKeys(
 // Return: None
 func (m *Module) seedFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	w := service.GetWorkflow(t)
-	logger := w.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	var seed int64
 	if err := starlark.UnpackArgs("int", args, kwargs, "seed", &seed); err != nil {
@@ -66,8 +65,7 @@ func (m *Module) seedFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.
 // Return: The generated random integer
 func (m *Module) randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	w := service.GetWorkflow(t)
-	logger := w.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	var min, max int
 	if err := starlark.UnpackArgs("int", args, kwargs, "min", &min, "max", &max); err != nil {
@@ -76,7 +74,7 @@ func (m *Module) randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starla
 	}
 
 	var v int
-	err := w.SideEffect(ctx, func(ctx workflow.Context) any {
+	err := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
 		if m.rand != nil { // seed was called before and a random source was created. Use it.
 			return m.rand.Intn(max-min+1) + min
 		}
@@ -96,11 +94,10 @@ func (m *Module) randIntFn(t *starlark.Thread, fn *starlark.Builtin, args starla
 // Return: The generated random number
 func (m *Module) randFn(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-	w := service.GetWorkflow(t)
-	logger := w.GetLogger(ctx)
+	logger := workflow.GetLogger(ctx)
 
 	var v float64
-	err := w.SideEffect(ctx, func(ctx workflow.Context) any {
+	err := workflow.SideEffect(ctx, func(ctx workflow.Context) any {
 		if m.rand != nil { // seed was called before and a random source was created. Use it
 			return m.rand.Float64()
 		}
