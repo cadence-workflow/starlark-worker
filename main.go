@@ -3,12 +3,10 @@ package main
 import (
 	"crypto/tls"
 	"flag"
-	"github.com/cadence-workflow/starlark-worker/cad"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/cadence"
+	"github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"github.com/cadence-workflow/starlark-worker/plugin"
-	"github.com/uber-go/tally"
-	"go.uber.org/cadence/worker"
-	"go.uber.org/cadence/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -44,31 +42,17 @@ func main() {
 
 	logger.Info("Options", zap.Any("Options", opt))
 
-	cadInterface := cad.NewInterface(opt.CadenceURL)
-
-	cadWorker := worker.New(
-		cadInterface,
-		opt.CadenceDomain,
-		opt.CadenceTaskList,
-		worker.Options{
-			MetricsScope: tally.NoopScope,
-			Logger:       logger,
-			DataConverter: &cadstar.DataConverter{
-				Logger: logger,
-			},
-			ContextPropagators: []workflow.ContextPropagator{
-				&cad.HeadersContextPropagator{},
-			},
-		},
-	)
-
-	service := &cadstar.Service{
+	service := &service.Service{
 		Plugins:        plugin.Registry,
 		ClientTaskList: opt.ClientTaskList,
 	}
-	service.Register(cadWorker)
+	backend := cadence.GetBackend()
+	if opt.Backend == "temporal" {
+		backend = temporal.GetBackend()
+	}
+	serviceWorker := service.Register(backend, opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
 
-	if err := cadWorker.Start(); err != nil {
+	if err := serviceWorker.Start(); err != nil {
 		logger.Fatal("Start", zap.Error(err))
 	}
 
@@ -77,6 +61,6 @@ func main() {
 	logger.Info("Server started. Press CTRL+C to exit.")
 
 	<-sig
-	cadWorker.Stop()
+	serviceWorker.Stop()
 	logger.Info("EXIT.")
 }
