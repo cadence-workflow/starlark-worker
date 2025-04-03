@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/commons"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -16,10 +15,6 @@ import (
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
-
-type contextKey int
-
-const contextKeyGlobals contextKey = iota
 
 var builtins = starlark.StringDict{
 	star.CallableObjectType: star.CallableObjectConstructor,
@@ -98,11 +93,11 @@ func (r *Service) Run(
 		environ = &starlark.Dict{}
 	}
 
-	ao := commons.DefaultActivityOptions
+	ao := DefaultActivityOptions
 	ao.TaskList = r.ClientTaskList
 	ctx = r.workflow.WithActivityOptions(ctx, ao)
 
-	cwo := commons.DefaultChildWorkflowOptions
+	cwo := DefaultChildWorkflowOptions
 	cwo.TaskList = r.ClientTaskList
 	ctx = r.workflow.WithChildOptions(ctx, cwo)
 

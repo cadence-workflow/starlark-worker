@@ -1,4 +1,4 @@
-package commons
+package service
 
 import (
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
