@@ -6,12 +6,12 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/uber-go/tally"
+	enumspb "go.temporal.io/api/enums/v1"
 	tempactivity "go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	tmpworker "go.temporal.io/sdk/worker"
 	temp "go.temporal.io/sdk/workflow"
-	cad "go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"reflect"
 	"time"
@@ -73,7 +73,7 @@ func (f *temporalFuture) IsReady() bool {
 	return f.f.IsReady()
 }
 
-func (tw *temporalWorker) RegisterWorkflow(wf interface{}) {
+func UpdateWorkflowFunctionContextArgument(wf interface{}) interface{} {
 	originalFunc := reflect.ValueOf(wf)
 	originalType := originalFunc.Type()
 
@@ -83,7 +83,7 @@ func (tw *temporalWorker) RegisterWorkflow(wf interface{}) {
 
 	// Build a new function with the same signature but context converted to cadence.Context
 	wrappedFuncType := reflect.FuncOf(
-		append([]reflect.Type{reflect.TypeOf((*cad.Context)(nil)).Elem()}, worker.GetRemainingInTypes(originalType)...),
+		append([]reflect.Type{reflect.TypeOf((*temp.Context)(nil)).Elem()}, worker.GetRemainingInTypes(originalType)...),
 		worker.GetOutTypes(originalType),
 		false,
 	)
@@ -98,7 +98,11 @@ func (tw *temporalWorker) RegisterWorkflow(wf interface{}) {
 		return originalFunc.Call(newArgs)
 	})
 
-	tw.w.RegisterWorkflow(wrappedFunc.Interface())
+	return wrappedFunc.Interface()
+}
+
+func (tw *temporalWorker) RegisterWorkflow(wf interface{}) {
+	tw.w.RegisterWorkflow(UpdateWorkflowFunctionContextArgument(wf))
 }
 func (tw *temporalWorker) RegisterActivity(a interface{}) {
 	tw.w.RegisterActivity(a)
@@ -180,11 +184,12 @@ var _ workflow.Workflow = (*temporalWorkflow)(nil)
 
 func (w temporalWorkflow) GetLogger(ctx workflow.Context) *zap.Logger {
 	logger := temp.GetLogger(ctx.(temp.Context))
+
 	if zl, ok := logger.(*ZapLoggerAdapter); ok {
 		zap := zl.Zap()
 		return zap
 	}
-	return nil
+	return zap.NewNop()
 }
 
 func (w temporalWorkflow) GetInfo(ctx workflow.Context) workflow.IInfo {
@@ -204,13 +209,11 @@ func (w temporalWorkflow) ExecuteChildWorkflow(ctx workflow.Context, name interf
 }
 
 func (w temporalWorkflow) WithValue(parent workflow.Context, key interface{}, val interface{}) workflow.Context {
-	//TODO implement me
-	panic("implement me")
+	return temp.WithValue(parent.(temp.Context), key, val)
 }
 
 func (w temporalWorkflow) NewDisconnectedContext(parent workflow.Context) (ctx workflow.Context, cancel func()) {
-	//TODO implement me
-	panic("implement me")
+	return temp.NewDisconnectedContext(parent.(temp.Context))
 }
 
 func (w temporalWorkflow) GetMetricsScope(ctx workflow.Context) tally.Scope {
@@ -219,8 +222,7 @@ func (w temporalWorkflow) GetMetricsScope(ctx workflow.Context) tally.Scope {
 }
 
 func (w *temporalWorkflow) WithTaskList(ctx workflow.Context, name string) workflow.Context {
-	//TODO implement me
-	panic("implement me")
+	return temp.WithTaskQueue(ctx.(temp.Context), name)
 }
 
 func (w *temporalWorkflow) WithActivityOptions(ctx workflow.Context, options workflow.ActivityOptions) workflow.Context {
@@ -246,13 +248,29 @@ func (w *temporalWorkflow) WithActivityOptions(ctx workflow.Context, options wor
 }
 
 func (w temporalWorkflow) WithChildOptions(ctx workflow.Context, cwo workflow.ChildWorkflowOptions) workflow.Context {
-	//TODO implement me
-	panic("implement me")
+	opt := temp.ChildWorkflowOptions{
+		Namespace:                cwo.Domain,
+		WorkflowID:               cwo.WorkflowID,
+		TaskQueue:                cwo.TaskList,
+		WorkflowExecutionTimeout: cwo.ExecutionStartToCloseTimeout,
+		//WorkflowRunTimeout:       cwo.,
+		WorkflowTaskTimeout: cwo.TaskStartToCloseTimeout,
+		WaitForCancellation: cwo.WaitForCancellation,
+		//RetryPolicy:              cwo.RetryPolicy,
+		CronSchedule: cwo.CronSchedule,
+		Memo:         cwo.Memo,
+		//TypedSearchAttributes:    cwo.SearchAttributes,
+		ParentClosePolicy: 0,
+		VersioningIntent:  0,
+	}
+	if _, ok := enumspb.WorkflowIdReusePolicy_name[int32(cwo.WorkflowIDReusePolicy)]; ok {
+		opt.WorkflowIDReusePolicy = enumspb.WorkflowIdReusePolicy(int32(cwo.WorkflowIDReusePolicy))
+	}
+	return temp.WithChildOptions(ctx.(temp.Context), opt)
 }
 
 func (w temporalWorkflow) SetQueryHandler(ctx workflow.Context, queryType string, handler interface{}) error {
-	//TODO implement me
-	panic("implement me")
+	return temp.SetQueryHandler(ctx.(temp.Context), queryType, handler)
 }
 
 func (w temporalWorkflow) WithWorkflowDomain(ctx workflow.Context, name string) workflow.Context {

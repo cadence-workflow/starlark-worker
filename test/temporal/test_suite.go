@@ -6,18 +6,36 @@ import (
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
+	"github.com/cadence-workflow/starlark-worker/internal/temporal"
+	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
-	"go.temporal.io/sdk/worker"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zaptest"
+	tmp "go.temporal.io/sdk/workflow"
 	"strings"
 	"testing"
 )
+
+type testEnvironment struct {
+	env *testsuite.TestWorkflowEnvironment
+}
+
+func (t testEnvironment) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
+	t.env.RegisterWorkflowWithOptions(temporal.UpdateWorkflowFunctionContextArgument(w), tmp.RegisterOptions{})
+}
+func (t testEnvironment) RegisterWorkflow(w interface{}) {
+	t.env.RegisterWorkflow(temporal.UpdateWorkflowFunctionContextArgument(w))
+}
+func (t testEnvironment) RegisterActivity(a interface{}) {
+	t.env.RegisterActivity(a)
+}
+func (t testEnvironment) RegisterActivityWithOptions(a interface{}, options worker.RegisterActivityOptions) {
+	t.env.RegisterActivityWithOptions(a, activity.RegisterOptions{})
+}
 
 type StarTestEnvironment struct {
 	env     *testsuite.TestWorkflowEnvironment
@@ -41,7 +59,7 @@ func (r *StarTestEnvironment) ExecuteFunction(
 	kw []starlark.Tuple,
 	environ *starlark.Dict,
 ) {
-	r.env.ExecuteWorkflow(r.service.Run, r.tar, filePath, fn, args, kw, environ)
+	r.env.ExecuteWorkflow(temporal.UpdateWorkflowFunctionContextArgument(r.service.Run), r.tar, filePath, fn, args, kw, environ)
 }
 
 func (r *StarTestEnvironment) GetResult(valuePtr any) error {
@@ -98,16 +116,17 @@ type StarTestEnvironmentParams struct {
 }
 
 func (r *StarTestSuite) NewEnvironment(t *testing.T, p *StarTestEnvironmentParams) *StarTestEnvironment {
-	logger := zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel))
-
 	env := r.NewTestWorkflowEnvironment()
-	env.SetWorkerOptions(worker.Options{})
-
 	service := &service.Service{
 		Plugins:        p.Plugins,
 		ClientTaskList: "test",
+		Workflow:       p.ServiceBackend.RegisterWorkflow(),
 	}
-	service.Register(p.ServiceBackend, "localhost:7233", "default", "test", logger)
+	testEnv := testEnvironment{env: env}
+
+	for _, plugin := range p.Plugins {
+		plugin.Register(testEnv)
+	}
 
 	if r.tarCache == nil {
 		r.tarCache = map[string][]byte{}

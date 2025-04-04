@@ -40,14 +40,15 @@ type env interface {
 type envBuilder func(t *testing.T) env
 
 func runTestSuite(t *testing.T, label string, build envBuilder) {
-	testEnv := build(t)
-	t.Cleanup(func() {
-		testEnv.AssertExpectations(t)
-	})
 
 	for _, tc := range testCases {
 		t.Run(label+"_"+tc.name, func(t *testing.T) {
+			testEnv := build(t)
+			t.Cleanup(func() {
+				testEnv.AssertExpectations(t)
+			})
 			testEnv.ExecuteFunction("/test.star", tc.function, nil, nil, nil)
+
 			var res string
 			require.NoError(t, testEnv.GetResult(&res))
 			require.Equal(t, tc.wantResult, res)

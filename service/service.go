@@ -50,7 +50,7 @@ type Service struct {
 	Plugins        map[string]IPlugin
 	ClientTaskList string
 
-	workflow workflow.Workflow
+	Workflow workflow.Workflow
 }
 
 // TODO: [feature] Cadence workflow with starlark REPL (event listener loop?) starlark.ExecREPLChunk()
@@ -68,7 +68,7 @@ func (r *Service) Run(
 	err error,
 ) {
 
-	ctx = workflow.WithBackend(ctx, r.workflow)
+	ctx = workflow.WithBackend(ctx, r.Workflow)
 
 	logger := workflow.GetLogger(ctx)
 
@@ -241,7 +241,7 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 func (r *Service) Register(s backend.Backend, url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
 	w := s.RegisterWorker(url, domain, taskList, logger)
 	w.RegisterWorkflow(r.Run)
-	r.workflow = s.RegisterWorkflow()
+	r.Workflow = s.RegisterWorkflow()
 	for _, plugin := range r.Plugins {
 		plugin.Register(w)
 	}

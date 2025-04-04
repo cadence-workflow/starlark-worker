@@ -38,7 +38,11 @@ func GetBackend(ctx Context) (Workflow, bool) {
 }
 
 func WithBackend(parent Context, w Workflow) Context {
-	return w.WithValue(parent, backendContextKey, w)
+	c := w.WithValue(parent, backendContextKey, w)
+	if _, ok := GetBackend(c); !ok {
+		panic("failed to set backend in context")
+	}
+	return c
 }
 
 func GetLogger(ctx Context) *zap.Logger {
@@ -49,7 +53,7 @@ func GetLogger(ctx Context) *zap.Logger {
 }
 
 func WithValue(parent Context, key interface{}, val interface{}) Context {
-	if backend, ok := GetBackend(parent); !ok {
+	if backend, ok := GetBackend(parent); ok {
 		return backend.WithValue(parent, key, val)
 	}
 	return parent
