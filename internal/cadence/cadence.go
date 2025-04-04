@@ -1,6 +1,7 @@
 package cadence
 
 import (
+	"context"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -37,6 +38,8 @@ var _ backend.Backend = (*cadenceBackend)(nil)
 
 func (c cadenceBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
 	cadInterface := NewInterface(url)
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "backendContextKey", cadenceWorkflow{})
 	worker := cadworker.New(
 		cadInterface,
 		domain,
@@ -50,6 +53,7 @@ func (c cadenceBackend) RegisterWorker(url string, domain string, taskList strin
 			ContextPropagators: []cad.ContextPropagator{
 				&HeadersContextPropagator{},
 			},
+			BackgroundActivityContext: ctx,
 		},
 	)
 	return &cadenceWorker{w: worker}
@@ -195,6 +199,10 @@ var _ workflow.Workflow = (*cadenceWorkflow)(nil)
 
 func (w cadenceWorkflow) GetLogger(ctx workflow.Context) *zap.Logger {
 	return cad.GetLogger(ctx.(cad.Context))
+}
+
+func (w cadenceWorkflow) GetActivityLogger(ctx context.Context) *zap.Logger {
+	return cadactivity.GetLogger(ctx)
 }
 
 func (w cadenceWorkflow) GetInfo(ctx workflow.Context) workflow.IInfo {

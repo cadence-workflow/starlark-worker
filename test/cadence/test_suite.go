@@ -2,6 +2,7 @@ package cadence
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
@@ -9,6 +10,7 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/test"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
@@ -159,4 +161,30 @@ func (r *StarTestSuite) buildTar(t *testing.T, p string) ([]byte, bool) {
 	tar := bb.Bytes()
 	r.tarCache[p] = tar
 	return tar, false
+}
+
+type starTestActivitySuite struct {
+	testsuite.WorkflowTestSuite
+	env *testsuite.TestActivityEnvironment
+}
+
+func NewTestActivitySuite() test.StarTestActivitySuite {
+	s := starTestActivitySuite{}
+	s.env = s.NewTestActivityEnvironment()
+	ctx := context.WithValue(context.Background(), "backendContextKey", cadence.GetBackend().RegisterWorkflow())
+	s.env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: ctx,
+	})
+	return s
+}
+
+func (r starTestActivitySuite) RegisterActivity(a interface{}) {
+	if r.env == nil {
+		r.env = r.NewTestActivityEnvironment()
+	}
+	r.env.RegisterActivity(a)
+}
+
+func (r starTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (test.EncodedValue, error) {
+	return r.env.ExecuteActivity(a, opts)
 }

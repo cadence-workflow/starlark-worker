@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/uber-go/tally"
@@ -12,6 +13,7 @@ var backendContextKey = "backendContextKey"
 
 type Workflow interface {
 	GetLogger(ctx Context) *zap.Logger
+	GetActivityLogger(ctx context.Context) *zap.Logger
 	WithValue(parent Context, key interface{}, val interface{}) Context
 	NewDisconnectedContext(parent Context) (ctx Context, cancel func())
 	GetMetricsScope(ctx Context) tally.Scope

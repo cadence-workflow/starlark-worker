@@ -2,6 +2,7 @@ package temporal
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
@@ -10,11 +11,13 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/test"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
+	tmpworker "go.temporal.io/sdk/worker"
 	tmp "go.temporal.io/sdk/workflow"
 	"strings"
 	"testing"
@@ -171,4 +174,27 @@ func (r *StarTestSuite) buildTar(t *testing.T, dir string) ([]byte, bool) {
 	tar := buf.Bytes()
 	r.tarCache[dir] = tar
 	return tar, false
+}
+
+type starTestActivitySuite struct {
+	testsuite.WorkflowTestSuite
+	env *testsuite.TestActivityEnvironment
+}
+
+func NewTestActivitySuite() test.StarTestActivitySuite {
+	s := starTestActivitySuite{}
+	s.env = s.NewTestActivityEnvironment()
+	ctx := context.WithValue(context.Background(), "backendContextKey", temporal.GetBackend().RegisterWorkflow())
+	s.env.SetWorkerOptions(tmpworker.Options{
+		BackgroundActivityContext: ctx,
+	})
+	return s
+}
+
+func (r starTestActivitySuite) RegisterActivity(a interface{}) {
+	r.env.RegisterActivity(a)
+}
+
+func (r starTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (test.EncodedValue, error) {
+	return r.env.ExecuteActivity(a, opts)
 }

@@ -1,6 +1,7 @@
 package temporal
 
 import (
+	"context"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -34,10 +35,14 @@ func (c temporalBackend) RegisterWorker(url string, domain string, taskList stri
 	if err != nil {
 		panic("failed to create temporal client")
 	}
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "backendContextKey", temporalWorkflow{})
 	worker := tmpworker.New(
 		client,
 		taskList,
-		tmpworker.Options{},
+		tmpworker.Options{
+			BackgroundActivityContext: ctx,
+		},
 	)
 	return &temporalWorker{w: worker}
 }
@@ -185,6 +190,15 @@ var _ workflow.Workflow = (*temporalWorkflow)(nil)
 func (w temporalWorkflow) GetLogger(ctx workflow.Context) *zap.Logger {
 	logger := temp.GetLogger(ctx.(temp.Context))
 
+	if zl, ok := logger.(*ZapLoggerAdapter); ok {
+		zap := zl.Zap()
+		return zap
+	}
+	return zap.NewNop()
+}
+
+func (w temporalWorkflow) GetActivityLogger(ctx context.Context) *zap.Logger {
+	logger := tempactivity.GetLogger(ctx)
 	if zl, ok := logger.(*ZapLoggerAdapter); ok {
 		zap := zl.Zap()
 		return zap
