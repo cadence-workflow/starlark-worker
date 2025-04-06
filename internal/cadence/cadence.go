@@ -81,6 +81,7 @@ type cadenceWorker struct {
 	w cadworker.Worker
 }
 
+// TODO combine temporal UpdateWorkflowFunctionContextArgument and cadence UpdateWorkflowFunctionContextArgument
 func UpdateWorkflowFunctionContextArgument(wf interface{}) interface{} {
 	originalFunc := reflect.ValueOf(wf)
 	originalType := originalFunc.Type()

@@ -141,7 +141,6 @@ func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, erro
 
 func (r *activities) Do(
 	ctx context.Context,
-	w workflow.Workflow,
 	method string,
 	url string,
 	headers map[string][]string,
@@ -158,21 +157,21 @@ func (r *activities) Do(
 		logger.Error("activity-error", ext.ZapError(err)...)
 		return nil, workflow.NewCustomError(ctx, yarpcerrors.CodeInvalidArgument.String(), err.Error())
 	} else {
-		return do(ctx, w, r.client, req)
+		return do(ctx, r.client, req)
 	}
 }
 
-func do(ctx context.Context, w workflow.Workflow, client *http.Client, req *http.Request) ([]byte, error) {
+func do(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
 	logger := activity.GetLogger(ctx)
 	res, err := client.Do(req)
 	if err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, w.NewCustomError(yarpcerrors.CodeUnknown.String(), err.Error())
+		return nil, workflow.NewCustomError(ctx, yarpcerrors.CodeUnknown.String(), err.Error())
 	}
 	var buf bytes.Buffer
 	if err := res.Write(&buf); err != nil {
 		logger.Error("activity-error", ext.ZapError(err)...)
-		return nil, w.NewCustomError(yarpcerrors.CodeInternal.String(), err.Error())
+		return nil, workflow.NewCustomError(ctx, yarpcerrors.CodeInternal.String(), err.Error())
 	}
 	return buf.Bytes(), nil
 }
