@@ -7,8 +7,6 @@ import (
 	cad "github.com/cadence-workflow/starlark-worker/internal/cadence"
 	tem "github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"github.com/cadence-workflow/starlark-worker/service"
-	"github.com/cadence-workflow/starlark-worker/test/cadence"
-	"github.com/cadence-workflow/starlark-worker/test/temporal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,8 +55,8 @@ func runTestSuite(t *testing.T, label string, build envBuilder) {
 }
 func TestCadenceRunner(t *testing.T) {
 	runTestSuite(t, "Cadence", func(t *testing.T) env {
-		suite := &cadence.StarTestSuite{}
-		return suite.NewEnvironment(t, &cadence.StarTestEnvironmentParams{
+		suite := &service.StarCadTestSuite{}
+		return suite.NewCadEnvironment(t, &service.StarCadTestEnvironmentParams{
 			RootDirectory:  "testdata",
 			Plugins:        map[string]service.IPlugin{Plugin.ID(): Plugin},
 			ServiceBackend: cad.GetBackend(),
@@ -68,8 +66,8 @@ func TestCadenceRunner(t *testing.T) {
 
 func TestTemporalRunner(t *testing.T) {
 	runTestSuite(t, "Temporal", func(t *testing.T) env {
-		suite := &temporal.StarTestSuite{}
-		return suite.NewEnvironment(t, &temporal.StarTestEnvironmentParams{
+		suite := &service.StarTempTestSuite{}
+		return suite.NewTempEnvironment(t, &service.StarTempTestEnvironmentParams{
 			RootDirectory:  "testdata",
 			Plugins:        map[string]service.IPlugin{Plugin.ID(): Plugin},
 			ServiceBackend: tem.GetBackend(),

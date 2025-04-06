@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/test/cadence"
+	"github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -11,10 +11,10 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/cadence-workflow/starlark-worker/internal/activity"
+	"github.com/cadence-workflow/starlark-worker/internal/cadence"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
-	//"github.com/cadence-workflow/starlark-worker/test/cadence"
 )
 
 type TestPlugin struct{}
@@ -70,27 +70,31 @@ var testBuiltins = map[string]*starlark.Builtin{
 	"stringify_activity": starlark.NewBuiltin("stringify_activity", stringifyActivityWrapper),
 }
 
-type Test struct {
+type CadTest struct {
 	suite.Suite
-	cadence.StarTestSuite
-	env *cadence.StarTestEnvironment
+	StarCadTestSuite
+	env *StarCadTestEnvironment
 }
 
-func TestSuite(t *testing.T) { suite.Run(t, new(Test)) }
+func TestCadSuite(t *testing.T) { suite.Run(t, new(CadTest)) }
 
-func (r *Test) SetupSuite() {}
+func (r *CadTest) SetupSuite() {}
 
-func (r *Test) SetupTest() {
+func (r *CadTest) SetupTest() {
 	tp := &TestPlugin{}
-	r.env = r.NewEnvironment(r.T(), &cadence.StarTestEnvironmentParams{
-		RootDirectory: "testdata",
-		Plugins:       map[string]IPlugin{tp.ID(): tp},
+	r.env = r.NewCadEnvironment(r.T(), &StarCadTestEnvironmentParams{
+		RootDirectory:  "testdata",
+		Plugins:        map[string]IPlugin{tp.ID(): tp},
+		ServiceBackend: cadence.GetBackend(),
+		DataConvertor:  &cadence.DataConverter{},
 	})
 }
 
-func (r *Test) TearDownTest() { r.env.AssertExpectations(r.T()) }
+func (r *CadTest) TearDownTest() {
+	r.env.AssertExpectations(r.T())
+}
 
-func (r *Test) Test1() {
+func (r *CadTest) TestCad1() {
 	r.env.ExecuteFunction("/app.star", "plus", starlark.Tuple{
 		starlark.MakeInt(2),
 		starlark.MakeInt(3),
@@ -102,7 +106,54 @@ func (r *Test) Test1() {
 	require.Equal(starlark.MakeInt(5), res)
 }
 
-func (r *Test) TestPluginFunction() {
+func (r *CadTest) TestCadPluginFunction() {
+	r.env.ExecuteFunction("/app.star", "stringify", starlark.Tuple{
+		starlark.String("foo"),
+		starlark.MakeInt(100),
+	}, nil, nil)
+
+	require := r.Require()
+	var res starlark.String
+	require.NoError(r.env.GetResult(&res))
+	require.Equal(starlark.String(`("foo", 100)`), res)
+}
+
+type TempTest struct {
+	suite.Suite
+	StarTempTestSuite
+	env *StarTempTestEnvironment
+}
+
+func TestTempSuite(t *testing.T) { suite.Run(t, new(TempTest)) }
+
+func (r *TempTest) SetupSuite() {}
+
+func (r *TempTest) SetupTest() {
+	tp := &TestPlugin{}
+	r.env = r.NewTempEnvironment(r.T(), &StarTempTestEnvironmentParams{
+		RootDirectory:  "testdata",
+		Plugins:        map[string]IPlugin{tp.ID(): tp},
+		ServiceBackend: temporal.GetBackend(),
+	})
+}
+
+func (r *TempTest) TearDownTest() {
+	r.env.AssertExpectations(r.T())
+}
+
+func (r *TempTest) TestTemp1() {
+	r.env.ExecuteFunction("/app.star", "plus", starlark.Tuple{
+		starlark.MakeInt(2),
+		starlark.MakeInt(3),
+	}, nil, nil)
+
+	require := r.Require()
+	var res starlark.Int
+	require.NoError(r.env.GetResult(&res))
+	require.Equal(starlark.MakeInt(5), res)
+}
+
+func (r *TempTest) TestTempPluginFunction() {
 	r.env.ExecuteFunction("/app.star", "stringify", starlark.Tuple{
 		starlark.String("foo"),
 		starlark.MakeInt(100),

@@ -20,7 +20,7 @@ type CadenceTestSuite struct {
 	env *testsuite.TestWorkflowEnvironment
 }
 
-func TestTestSuite(t *testing.T) {
+func TestCadTestSuite(t *testing.T) {
 	suite.Run(t, new(CadenceTestSuite))
 }
 

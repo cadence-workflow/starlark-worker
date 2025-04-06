@@ -50,7 +50,7 @@ type Service struct {
 	Plugins        map[string]IPlugin
 	ClientTaskList string
 
-	Workflow workflow.Workflow
+	Backend backend.Backend
 }
 
 // TODO: [feature] Cadence workflow with starlark REPL (event listener loop?) starlark.ExecREPLChunk()
@@ -68,7 +68,7 @@ func (r *Service) Run(
 	err error,
 ) {
 
-	ctx = workflow.WithBackend(ctx, r.Workflow)
+	ctx = workflow.WithBackend(ctx, r.Backend.RegisterWorkflow())
 
 	logger := workflow.GetLogger(ctx)
 
@@ -238,14 +238,11 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 	return cadence.NewCustomError(reason, details)
 }
 
-func (r *Service) Register(s backend.Backend, url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
-	w := s.RegisterWorker(url, domain, taskList, logger)
-	w.RegisterWorkflow(r.Run)
-	r.Workflow = s.RegisterWorkflow()
+func (r *Service) Register(registry worker.Registry) {
+	registry.RegisterWorkflow(r.Run)
 	for _, plugin := range r.Plugins {
-		plugin.Register(w)
+		plugin.Register(registry)
 	}
-	return w
 }
 
 func GetExitHooks(ctx workflow.Context) *ExitHooks {

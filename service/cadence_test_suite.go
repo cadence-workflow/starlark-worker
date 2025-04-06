@@ -1,4 +1,4 @@
-package cadence
+package service
 
 import (
 	"bytes"
@@ -8,38 +8,67 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/cadence"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
-	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/internal/worker"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
-	"github.com/cadence-workflow/starlark-worker/test"
+	"github.com/cadence-workflow/starlark-worker/test/types"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
+	cadactivity "go.uber.org/cadence/activity"
 	"go.uber.org/cadence/testsuite"
-	"go.uber.org/cadence/worker"
+	cadworker "go.uber.org/cadence/worker"
+	cadworkflow "go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 	"strings"
 	"testing"
 )
 
-// StarTestEnvironment is a test environment for the Starlark functions.
-type StarTestEnvironment struct {
+type cadRegistry struct {
+	env *testsuite.TestWorkflowEnvironment
+}
+
+func (r cadRegistry) RegisterActivity(a interface{}) {
+	r.env.RegisterActivity(a)
+}
+func (r cadRegistry) RegisterActivityWithOptions(a interface{}, opt worker.RegisterActivityOptions) {
+	r.env.RegisterActivityWithOptions(a, cadactivity.RegisterOptions{
+		Name:                          opt.Name,
+		EnableShortName:               opt.EnableShortName,
+		DisableAlreadyRegisteredCheck: opt.DisableAlreadyRegisteredCheck,
+		EnableAutoHeartbeat:           opt.EnableAutoHeartbeat,
+	})
+}
+func (r cadRegistry) RegisterWorkflow(w interface{}) {
+	r.env.RegisterWorkflow(cadence.UpdateWorkflowFunctionContextArgument(w))
+}
+func (r cadRegistry) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
+	r.env.RegisterWorkflowWithOptions(cadence.UpdateWorkflowFunctionContextArgument(w), cadworkflow.RegisterOptions{
+		Name:                          options.Name,
+		EnableShortName:               options.EnableShortName,
+		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
+	})
+}
+
+// StarCadTestEnvironment is a test environment for the Starlark functions.
+type StarCadTestEnvironment struct {
 	env     *testsuite.TestWorkflowEnvironment
-	service *service.Service
+	service *Service
 	tar     []byte
 	fs      star.FS
 }
 
 // GetTestWorkflowEnvironment returns the underlying testsuite.TestWorkflowEnvironment instance.
-func (r *StarTestEnvironment) GetTestWorkflowEnvironment() *testsuite.TestWorkflowEnvironment {
+func (r *StarCadTestEnvironment) GetTestWorkflowEnvironment() *testsuite.TestWorkflowEnvironment {
 	return r.env
 }
 
-func (r *StarTestEnvironment) AssertExpectations(t *testing.T) {
+func (r *StarCadTestEnvironment) AssertExpectations(t *testing.T) {
 	r.env.AssertExpectations(t)
 }
 
-func (r *StarTestEnvironment) ExecuteFunction(
+func (r *StarCadTestEnvironment) ExecuteFunction(
 	filePath string,
 	fn string,
 	args starlark.Tuple,
@@ -50,7 +79,7 @@ func (r *StarTestEnvironment) ExecuteFunction(
 	env.ExecuteWorkflow(cadence.UpdateWorkflowFunctionContextArgument(r.service.Run), r.tar, filePath, fn, args, kw, environ)
 }
 
-func (r *StarTestEnvironment) GetResult(valuePtr any) error {
+func (r *StarCadTestEnvironment) GetResult(valuePtr any) error {
 	env := r.env
 	if !env.IsWorkflowCompleted() {
 		return fmt.Errorf("workflow is not completed")
@@ -63,7 +92,7 @@ func (r *StarTestEnvironment) GetResult(valuePtr any) error {
 }
 
 // GetTestFunctions returns the list of test functions in the given file. Test functions are the functions that start with "test_".
-func (r *StarTestEnvironment) GetTestFunctions(filePath string) ([]string, error) {
+func (r *StarCadTestEnvironment) GetTestFunctions(filePath string) ([]string, error) {
 	globals, err := r.getGlobals(filePath)
 	if err != nil {
 		return nil, err
@@ -79,7 +108,7 @@ func (r *StarTestEnvironment) GetTestFunctions(filePath string) ([]string, error
 }
 
 // getGlobals is a helper function that returns the global bindings in the given Starlark file.
-func (r *StarTestEnvironment) getGlobals(filePath string) ([]*resolve.Binding, error) {
+func (r *StarCadTestEnvironment) getGlobals(filePath string) ([]*resolve.Binding, error) {
 	src, err := r.fs.Read(filePath)
 	if err != nil {
 		return nil, err
@@ -94,34 +123,37 @@ func (r *StarTestEnvironment) getGlobals(filePath string) ([]*resolve.Binding, e
 	return code.Module.(*resolve.Module).Globals, nil
 }
 
-type StarTestSuite struct {
+type StarCadTestSuite struct {
 	testsuite.WorkflowTestSuite
 	tarCache map[string][]byte
 	fsCache  map[string]star.FS
 }
 
-type StarTestEnvironmentParams struct {
+type StarCadTestEnvironmentParams struct {
 	RootDirectory  string
-	Plugins        map[string]service.IPlugin
+	Plugins        map[string]IPlugin
 	DataConvertor  encoded.DataConvertor
 	ServiceBackend backend.Backend
 }
 
-// NewEnvironment creates a new StarTestEnvironment - test environment for the Starlark functions.
-func (r *StarTestSuite) NewEnvironment(t *testing.T, p *StarTestEnvironmentParams) *StarTestEnvironment {
+// NewCadEnvironment creates a new StarTestEnvironment - test environment for the Starlark functions.
+func (r *StarCadTestSuite) NewCadEnvironment(t *testing.T, p *StarCadTestEnvironmentParams) *StarCadTestEnvironment {
 	logger := zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel))
 
+	ctx := context.WithValue(context.Background(), workflow.BackendContextKey, cadence.GetBackend().RegisterWorkflow())
 	env := r.NewTestWorkflowEnvironment()
-	env.SetWorkerOptions(worker.Options{
-		Logger:        logger,
-		DataConverter: p.DataConvertor,
+	env.SetWorkerOptions(cadworker.Options{
+		Logger:                    logger,
+		DataConverter:             p.DataConvertor,
+		BackgroundActivityContext: ctx,
 	})
 
-	service := &service.Service{
+	service := &Service{
 		Plugins:        p.Plugins,
 		ClientTaskList: "test",
+		Backend:        p.ServiceBackend,
 	}
-	service.Register(p.ServiceBackend, "grpc://localhost:7933", "test", "test", logger)
+	service.Register(cadRegistry{env: env})
 
 	if r.tarCache == nil {
 		r.tarCache = map[string][]byte{}
@@ -145,10 +177,10 @@ func (r *StarTestSuite) NewEnvironment(t *testing.T, p *StarTestEnvironmentParam
 		r.fsCache[p.RootDirectory] = fs
 	}
 
-	return &StarTestEnvironment{env: env, service: service, tar: tar, fs: fs}
+	return &StarCadTestEnvironment{env: env, service: service, tar: tar, fs: fs}
 }
 
-func (r *StarTestSuite) buildTar(t *testing.T, p string) ([]byte, bool) {
+func (r *StarCadTestSuite) buildTar(t *testing.T, p string) ([]byte, bool) {
 	if r.tarCache == nil {
 		r.tarCache = make(map[string][]byte)
 	}
@@ -163,28 +195,28 @@ func (r *StarTestSuite) buildTar(t *testing.T, p string) ([]byte, bool) {
 	return tar, false
 }
 
-type starTestActivitySuite struct {
+type starCadTestActivitySuite struct {
 	testsuite.WorkflowTestSuite
 	env *testsuite.TestActivityEnvironment
 }
 
-func NewTestActivitySuite() test.StarTestActivitySuite {
-	s := starTestActivitySuite{}
+func NewCadTestActivitySuite() types.StarTestActivitySuite {
+	s := starCadTestActivitySuite{}
 	s.env = s.NewTestActivityEnvironment()
-	ctx := context.WithValue(context.Background(), "backendContextKey", cadence.GetBackend().RegisterWorkflow())
-	s.env.SetWorkerOptions(worker.Options{
+	ctx := context.WithValue(context.Background(), workflow.BackendContextKey, cadence.GetBackend().RegisterWorkflow())
+	s.env.SetWorkerOptions(cadworker.Options{
 		BackgroundActivityContext: ctx,
 	})
 	return s
 }
 
-func (r starTestActivitySuite) RegisterActivity(a interface{}) {
+func (r starCadTestActivitySuite) RegisterActivity(a interface{}) {
 	if r.env == nil {
 		r.env = r.NewTestActivityEnvironment()
 	}
 	r.env.RegisterActivity(a)
 }
 
-func (r starTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (test.EncodedValue, error) {
+func (r starCadTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (types.EncodedValue, error) {
 	return r.env.ExecuteActivity(a, opts)
 }

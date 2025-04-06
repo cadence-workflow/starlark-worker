@@ -3,9 +3,8 @@ package request
 import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/test"
-	"github.com/cadence-workflow/starlark-worker/test/cadence"
-	"github.com/cadence-workflow/starlark-worker/test/temporal"
+	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/test/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 	"net/http"
@@ -16,15 +15,15 @@ import (
 type Suite struct {
 	suite.Suite
 	server        *httptest.Server
-	activitySuite test.StarTestActivitySuite
+	activitySuite types.StarTestActivitySuite
 }
 
 func TestITCadence(t *testing.T) {
-	suite.Run(t, &Suite{activitySuite: cadence.NewTestActivitySuite()})
+	suite.Run(t, &Suite{activitySuite: service.NewCadTestActivitySuite()})
 }
 
 func TestITTemporal(t *testing.T) {
-	suite.Run(t, &Suite{activitySuite: temporal.NewTestActivitySuite()})
+	suite.Run(t, &Suite{activitySuite: service.NewTempTestActivitySuite()})
 }
 
 func (r *Suite) SetupSuite()    { r.server = httptest.NewServer(ext.NewHTTPTestHandler(r.T())) }

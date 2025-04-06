@@ -22,6 +22,16 @@ type DataConverter struct {
 	Logger *zap.Logger
 }
 
+func (s DataConverter) ToData(value ...interface{}) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s DataConverter) FromData(input []byte, valuePtr ...interface{}) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 var _ converter.DataConverter = (*DataConverter)(nil)
 
 // ToStrings converts a *commonpb.Payloads object into a slice of human-readable strings.
@@ -52,6 +62,22 @@ func (s DataConverter) ToString(payload *commonpb.Payload) string {
 
 // ToPayloads converts input values to Temporal's Payloads format
 func (s DataConverter) ToPayloads(values ...interface{}) (*commonpb.Payloads, error) {
+	if len(values) == 1 {
+		switch v := values[0].(type) {
+		case []byte:
+			return &commonpb.Payloads{
+				Payloads: []*commonpb.Payload{
+					{Data: v},
+				},
+			}, nil
+		case starlark.Bytes:
+			return &commonpb.Payloads{
+				Payloads: []*commonpb.Payload{
+					{Data: []byte(v)},
+				},
+			}, nil
+		}
+	}
 	payloads := &commonpb.Payloads{}
 	for _, v := range values {
 		payload, err := s.ToPayload(v)
@@ -79,14 +105,6 @@ func (s DataConverter) FromPayloads(payloads *commonpb.Payloads, to ...interface
 
 // ToPayload converts a single Go value to a Temporal Payload
 func (s DataConverter) ToPayload(value interface{}) (*commonpb.Payload, error) {
-	if value != nil {
-		switch v := value.(type) {
-		case []byte:
-			return &commonpb.Payload{Data: v}, nil
-		case starlark.Bytes:
-			return &commonpb.Payload{Data: []byte(v)}, nil
-		}
-	}
 	var buf bytes.Buffer
 	b, err := star.Encode(value) // Try star encoder first
 	if _, ok := err.(star.UnsupportedTypeError); ok {
@@ -103,16 +121,6 @@ func (s DataConverter) ToPayload(value interface{}) (*commonpb.Payload, error) {
 
 // FromPayload converts a single Temporal Payload back to a Go value
 func (s DataConverter) FromPayload(payload *commonpb.Payload, to interface{}) error {
-	//if to != nil {
-	//	switch to := to.(type) {
-	//	case *[]byte:
-	//		*to = payload.Data
-	//		return nil
-	//	case *starlark.Bytes:
-	//		*to = starlark.Bytes(payload.Data)
-	//		return nil
-	//	}
-	//}
 	r := bufio.NewReader(bytes.NewReader(payload.Data))
 	line, err := r.ReadBytes(delimiter)
 	if err != nil && err != io.EOF {
@@ -121,6 +129,11 @@ func (s DataConverter) FromPayload(payload *commonpb.Payload, to interface{}) er
 	}
 	if len(line) > 0 && line[len(line)-1] == delimiter {
 		line = line[:len(line)-1]
+	}
+
+	if err != nil && err != io.EOF {
+		s.Logger.Error("decode-error", ext.ZapError(err)...)
+		return err
 	}
 
 	err = star.Decode(line, to)

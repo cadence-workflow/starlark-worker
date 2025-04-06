@@ -1,4 +1,4 @@
-package temporal
+package service
 
 import (
 	"bytes"
@@ -9,53 +9,60 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
-	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
-	"github.com/cadence-workflow/starlark-worker/test"
+	"github.com/cadence-workflow/starlark-worker/test/types"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
-	"go.temporal.io/sdk/activity"
+	tmpactivity "go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 	tmpworker "go.temporal.io/sdk/worker"
-	tmp "go.temporal.io/sdk/workflow"
+	tmpworkflow "go.temporal.io/sdk/workflow"
 	"strings"
 	"testing"
 )
 
-type testEnvironment struct {
+type tempRegistry struct {
 	env *testsuite.TestWorkflowEnvironment
 }
 
-func (t testEnvironment) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
-	t.env.RegisterWorkflowWithOptions(temporal.UpdateWorkflowFunctionContextArgument(w), tmp.RegisterOptions{})
+func (r tempRegistry) RegisterActivity(a interface{}) {
+	r.env.RegisterActivity(a)
 }
-func (t testEnvironment) RegisterWorkflow(w interface{}) {
-	t.env.RegisterWorkflow(temporal.UpdateWorkflowFunctionContextArgument(w))
+func (r tempRegistry) RegisterActivityWithOptions(a interface{}, opt worker.RegisterActivityOptions) {
+	r.env.RegisterActivityWithOptions(a, tmpactivity.RegisterOptions{
+		Name:                          opt.Name,
+		DisableAlreadyRegisteredCheck: opt.DisableAlreadyRegisteredCheck,
+		SkipInvalidStructFunctions:    opt.SkipInvalidStructFunctions,
+	})
 }
-func (t testEnvironment) RegisterActivity(a interface{}) {
-	t.env.RegisterActivity(a)
+func (r tempRegistry) RegisterWorkflow(w interface{}) {
+	r.env.RegisterWorkflow(temporal.UpdateWorkflowFunctionContextArgument(w))
 }
-func (t testEnvironment) RegisterActivityWithOptions(a interface{}, options worker.RegisterActivityOptions) {
-	t.env.RegisterActivityWithOptions(a, activity.RegisterOptions{})
+func (r tempRegistry) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
+	r.env.RegisterWorkflowWithOptions(temporal.UpdateWorkflowFunctionContextArgument(w), tmpworkflow.RegisterOptions{
+		Name:                          options.Name,
+		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
+	})
 }
 
-type StarTestEnvironment struct {
+type StarTempTestEnvironment struct {
 	env     *testsuite.TestWorkflowEnvironment
-	service *service.Service
+	service *Service
 	tar     []byte
 	fs      star.FS
 }
 
-func (r *StarTestEnvironment) GetTestWorkflowEnvironment() *testsuite.TestWorkflowEnvironment {
+func (r *StarTempTestEnvironment) GetTestWorkflowEnvironment() *testsuite.TestWorkflowEnvironment {
 	return r.env
 }
 
-func (r *StarTestEnvironment) AssertExpectations(t *testing.T) {
+func (r *StarTempTestEnvironment) AssertExpectations(t *testing.T) {
 	r.env.AssertExpectations(t)
 }
 
-func (r *StarTestEnvironment) ExecuteFunction(
+func (r *StarTempTestEnvironment) ExecuteFunction(
 	filePath string,
 	fn string,
 	args starlark.Tuple,
@@ -65,7 +72,7 @@ func (r *StarTestEnvironment) ExecuteFunction(
 	r.env.ExecuteWorkflow(temporal.UpdateWorkflowFunctionContextArgument(r.service.Run), r.tar, filePath, fn, args, kw, environ)
 }
 
-func (r *StarTestEnvironment) GetResult(valuePtr any) error {
+func (r *StarTempTestEnvironment) GetResult(valuePtr any) error {
 	if !r.env.IsWorkflowCompleted() {
 		return fmt.Errorf("workflow is not completed")
 	}
@@ -75,7 +82,7 @@ func (r *StarTestEnvironment) GetResult(valuePtr any) error {
 	return r.env.GetWorkflowResult(valuePtr)
 }
 
-func (r *StarTestEnvironment) GetTestFunctions(filePath string) ([]string, error) {
+func (r *StarTempTestEnvironment) GetTestFunctions(filePath string) ([]string, error) {
 	globals, err := r.getGlobals(filePath)
 	if err != nil {
 		return nil, err
@@ -90,7 +97,7 @@ func (r *StarTestEnvironment) GetTestFunctions(filePath string) ([]string, error
 	return res, nil
 }
 
-func (r *StarTestEnvironment) getGlobals(filePath string) ([]*resolve.Binding, error) {
+func (r *StarTempTestEnvironment) getGlobals(filePath string) ([]*resolve.Binding, error) {
 	src, err := r.fs.Read(filePath)
 	if err != nil {
 		return nil, err
@@ -105,31 +112,33 @@ func (r *StarTestEnvironment) getGlobals(filePath string) ([]*resolve.Binding, e
 	return code.Module.(*resolve.Module).Globals, nil
 }
 
-type StarTestSuite struct {
+type StarTempTestSuite struct {
 	testsuite.WorkflowTestSuite
 	tarCache map[string][]byte
 	fsCache  map[string]star.FS
 }
 
-type StarTestEnvironmentParams struct {
+type StarTempTestEnvironmentParams struct {
 	RootDirectory  string
-	Plugins        map[string]service.IPlugin
+	Plugins        map[string]IPlugin
 	DataConvertor  encoded.DataConvertor
 	ServiceBackend backend.Backend
 }
 
-func (r *StarTestSuite) NewEnvironment(t *testing.T, p *StarTestEnvironmentParams) *StarTestEnvironment {
+func (r *StarTempTestSuite) NewTempEnvironment(t *testing.T, p *StarTempTestEnvironmentParams) *StarTempTestEnvironment {
 	env := r.NewTestWorkflowEnvironment()
-	service := &service.Service{
+	ctx := context.WithValue(context.Background(), workflow.BackendContextKey, temporal.GetBackend().RegisterWorkflow())
+	env.SetWorkerOptions(tmpworker.Options{
+		BackgroundActivityContext: ctx,
+	})
+	env.SetDataConverter(temporal.DataConverter{})
+	service := &Service{
 		Plugins:        p.Plugins,
 		ClientTaskList: "test",
-		Workflow:       p.ServiceBackend.RegisterWorkflow(),
+		Backend:        p.ServiceBackend,
 	}
-	testEnv := testEnvironment{env: env}
 
-	for _, plugin := range p.Plugins {
-		plugin.Register(testEnv)
-	}
+	service.Register(tempRegistry{env: env})
 
 	if r.tarCache == nil {
 		r.tarCache = map[string][]byte{}
@@ -153,7 +162,7 @@ func (r *StarTestSuite) NewEnvironment(t *testing.T, p *StarTestEnvironmentParam
 		r.fsCache[p.RootDirectory] = fs
 	}
 
-	return &StarTestEnvironment{
+	return &StarTempTestEnvironment{
 		env:     env,
 		service: service,
 		tar:     tar,
@@ -161,7 +170,7 @@ func (r *StarTestSuite) NewEnvironment(t *testing.T, p *StarTestEnvironmentParam
 	}
 }
 
-func (r *StarTestSuite) buildTar(t *testing.T, dir string) ([]byte, bool) {
+func (r *StarTempTestSuite) buildTar(t *testing.T, dir string) ([]byte, bool) {
 	if r.tarCache == nil {
 		r.tarCache = map[string][]byte{}
 	}
@@ -176,25 +185,25 @@ func (r *StarTestSuite) buildTar(t *testing.T, dir string) ([]byte, bool) {
 	return tar, false
 }
 
-type starTestActivitySuite struct {
+type starTempTestActivitySuite struct {
 	testsuite.WorkflowTestSuite
 	env *testsuite.TestActivityEnvironment
 }
 
-func NewTestActivitySuite() test.StarTestActivitySuite {
-	s := starTestActivitySuite{}
+func NewTempTestActivitySuite() types.StarTestActivitySuite {
+	s := starTempTestActivitySuite{}
 	s.env = s.NewTestActivityEnvironment()
-	ctx := context.WithValue(context.Background(), "backendContextKey", temporal.GetBackend().RegisterWorkflow())
+	ctx := context.WithValue(context.Background(), workflow.BackendContextKey, temporal.GetBackend().RegisterWorkflow())
 	s.env.SetWorkerOptions(tmpworker.Options{
 		BackgroundActivityContext: ctx,
 	})
 	return s
 }
 
-func (r starTestActivitySuite) RegisterActivity(a interface{}) {
+func (r starTempTestActivitySuite) RegisterActivity(a interface{}) {
 	r.env.RegisterActivity(a)
 }
 
-func (r starTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (test.EncodedValue, error) {
+func (r starTempTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (types.EncodedValue, error) {
 	return r.env.ExecuteActivity(a, opts)
 }

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var backendContextKey = "backendContextKey"
+var BackendContextKey = "BackendContextKey"
 
 type Workflow interface {
 	GetLogger(ctx Context) *zap.Logger
@@ -35,12 +35,12 @@ type Workflow interface {
 }
 
 func GetBackend(ctx Context) (Workflow, bool) {
-	backend, ok := ctx.Value(backendContextKey).(Workflow)
+	backend, ok := ctx.Value(BackendContextKey).(Workflow)
 	return backend, ok
 }
 
 func WithBackend(parent Context, w Workflow) Context {
-	c := w.WithValue(parent, backendContextKey, w)
+	c := w.WithValue(parent, BackendContextKey, w)
 	if _, ok := GetBackend(c); !ok {
 		panic("failed to set backend in context")
 	}

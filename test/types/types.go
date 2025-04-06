@@ -1,4 +1,4 @@
-package test
+package types
 
 type EncodedValue interface {
 	// HasValue return whether there is value encoded.

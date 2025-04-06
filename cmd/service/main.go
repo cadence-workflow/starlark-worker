@@ -42,15 +42,18 @@ func main() {
 
 	logger.Info("Options", zap.Any("Options", opt))
 
+	backend := cadence.GetBackend()
 	service := &service.Service{
 		Plugins:        plugin.Registry,
 		ClientTaskList: opt.ClientTaskList,
+		Backend:        backend,
 	}
-	backend := cadence.GetBackend()
 	if opt.Backend == "temporal" {
 		backend = temporal.GetBackend()
 	}
-	serviceWorker := service.Register(backend, opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
+
+	serviceWorker := backend.RegisterWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
+	service.Register(serviceWorker)
 
 	if err := serviceWorker.Start(); err != nil {
 		logger.Fatal("Start", zap.Error(err))

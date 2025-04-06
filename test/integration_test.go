@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/plugin"
-	"github.com/cadence-workflow/starlark-worker/test/cadence"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
 	cad "go.uber.org/cadence"
@@ -19,10 +19,10 @@ import (
 
 type Suite struct {
 	suite.Suite
-	cadence.StarTestSuite
+	service.StarCadTestSuite
 	httpHandler ext.HTTPTestHandler
 	server      *httptest.Server
-	env         *cadence.StarTestEnvironment
+	env         *service.StarCadTestEnvironment
 }
 
 func TestIT(t *testing.T) { suite.Run(t, new(Suite)) }
@@ -33,7 +33,7 @@ func (r *Suite) SetupSuite() {
 }
 
 func (r *Suite) SetupTest() {
-	r.env = r.NewEnvironment(r.T(), &cadence.StarTestEnvironmentParams{
+	r.env = r.NewCadEnvironment(r.T(), &service.StarCadTestEnvironmentParams{
 		RootDirectory: ".",
 		Plugins:       plugin.Registry,
 	})
