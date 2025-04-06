@@ -81,6 +81,8 @@ type cadenceWorker struct {
 	w cadworker.Worker
 }
 
+var _ worker.Worker = (*cadenceWorker)(nil)
+
 // TODO combine temporal UpdateWorkflowFunctionContextArgument and cadence UpdateWorkflowFunctionContextArgument
 func UpdateWorkflowFunctionContextArgument(wf interface{}) interface{} {
 	originalFunc := reflect.ValueOf(wf)
@@ -264,7 +266,7 @@ func (w cadenceWorkflow) WithChildOptions(ctx workflow.Context, cwo workflow.Chi
 		ExecutionStartToCloseTimeout: cwo.ExecutionStartToCloseTimeout,
 		TaskStartToCloseTimeout:      cwo.TaskStartToCloseTimeout,
 		WaitForCancellation:          cwo.WaitForCancellation,
-		CronSchedule:                 cwo.Domain,
+		CronSchedule:                 cwo.CronSchedule,
 		Memo:                         cwo.Memo,
 		SearchAttributes:             cwo.SearchAttributes,
 	}
@@ -309,13 +311,13 @@ func (w cadenceWorkflow) NewFuture(ctx workflow.Context) (workflow.Future, workf
 
 func (w cadenceWorkflow) Go(ctx workflow.Context, f func(ctx workflow.Context)) {
 	cad.Go(ctx.(cad.Context), func(c cad.Context) {
-		f(ctx)
+		f(c)
 	})
 }
 
 func (w cadenceWorkflow) SideEffect(ctx workflow.Context, f func(ctx workflow.Context) interface{}) encoded.Value {
-	return cad.SideEffect(ctx.(cad.Context), func(ctx cad.Context) interface{} {
-		return f(ctx)
+	return cad.SideEffect(ctx.(cad.Context), func(c cad.Context) interface{} {
+		return f(c)
 	})
 }
 
@@ -356,6 +358,7 @@ func NewInterface(location string) workflowserviceclient.Interface {
 			},
 		},
 	})
+	defer dispatcher.Stop()
 	if err := dispatcher.Start(); err != nil {
 		log.Fatalln(err)
 	}
