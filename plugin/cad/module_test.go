@@ -1,40 +1,76 @@
 package cad
 
 import (
-	"github.com/cadence-workflow/starlark-worker/cadstar"
-	"github.com/stretchr/testify/suite"
+	"go.starlark.net/starlark"
 	"testing"
+
+	cad "github.com/cadence-workflow/starlark-worker/internal/cadence"
+	tem "github.com/cadence-workflow/starlark-worker/internal/temporal"
+	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/stretchr/testify/require"
 )
 
-type Test struct {
-	suite.Suite
-	cadstar.StarTestSuite
-	env *cadstar.StarTestEnvironment
+type testCase struct {
+	name       string
+	function   string
+	wantResult string
 }
 
-func TestSuite(t *testing.T) { suite.Run(t, new(Test)) }
+var testCases = []testCase{
+	{
+		name:       "ExecutionID",
+		function:   "test_execution_id",
+		wantResult: "default-test-workflow-id",
+	},
+	{
+		name:       "ExecutionRunID",
+		function:   "test_execution_run_id",
+		wantResult: "default-test-run-id",
+	},
+}
 
-func (r *Test) SetupTest() {
-	r.env = r.NewEnvironment(r.T(), &cadstar.StarTestEnvironmentParams{
-		RootDirectory: "testdata",
-		Plugins:       map[string]cadstar.IPlugin{Plugin.ID(): Plugin},
+type env interface {
+	ExecuteFunction(filePath, function string, args starlark.Tuple, kw []starlark.Tuple, env *starlark.Dict)
+	GetResult(ptr any) error
+	AssertExpectations(t *testing.T)
+}
+
+type envBuilder func(t *testing.T) env
+
+func runTestSuite(t *testing.T, label string, build envBuilder) {
+
+	for _, tc := range testCases {
+		t.Run(label+"_"+tc.name, func(t *testing.T) {
+			testEnv := build(t)
+			t.Cleanup(func() {
+				testEnv.AssertExpectations(t)
+			})
+			testEnv.ExecuteFunction("/test.star", tc.function, nil, nil, nil)
+
+			var res string
+			require.NoError(t, testEnv.GetResult(&res))
+			require.Equal(t, tc.wantResult, res)
+		})
+	}
+}
+func TestCadenceRunner(t *testing.T) {
+	runTestSuite(t, "Cadence", func(t *testing.T) env {
+		suite := &service.StarCadTestSuite{}
+		return suite.NewCadEnvironment(t, &service.StarCadTestEnvironmentParams{
+			RootDirectory:  "testdata",
+			Plugins:        map[string]service.IPlugin{Plugin.ID(): Plugin},
+			ServiceBackend: cad.GetBackend(),
+		})
 	})
 }
 
-func (r *Test) TearDownTest() { r.env.AssertExpectations(r.T()) }
-
-func (r *Test) TestExecutionID() {
-	r.env.ExecuteFunction("/test.star", "test_execution_id", nil, nil, nil)
-	require := r.Require()
-	var res string
-	require.NoError(r.env.GetResult(&res))
-	require.Equal("default-test-workflow-id", res)
-}
-
-func (r *Test) TestExecutionRunID() {
-	r.env.ExecuteFunction("/test.star", "test_execution_run_id", nil, nil, nil)
-	require := r.Require()
-	var res string
-	require.NoError(r.env.GetResult(&res))
-	require.Equal("default-test-run-id", res)
+func TestTemporalRunner(t *testing.T) {
+	runTestSuite(t, "Temporal", func(t *testing.T) env {
+		suite := &service.StarTempTestSuite{}
+		return suite.NewTempEnvironment(t, &service.StarTempTestEnvironmentParams{
+			RootDirectory:  "testdata",
+			Plugins:        map[string]service.IPlugin{Plugin.ID(): Plugin},
+			ServiceBackend: tem.GetBackend(),
+		})
+	})
 }

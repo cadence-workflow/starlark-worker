@@ -3,6 +3,7 @@ package star
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkjson"
@@ -82,6 +83,23 @@ func Decode(line []byte, out any) (err error) {
 	}
 
 	switch out := out.(type) {
+	case *[]byte:
+		var decodedString string
+
+		// Decode JSON string
+		err = json.Unmarshal(line, &decodedString)
+		if err != nil {
+			fmt.Println("Error decoding JSON:", err)
+			return err
+		}
+		rawBytes := []byte(decodedString)
+		res := make([]byte, b64.DecodedLen(len(rawBytes)))
+		if n, decodeErr := b64.Decode(res, rawBytes); decodeErr != nil {
+			return decodeErr
+		} else {
+			res = res[:n]
+		}
+		*out = res
 	case *starlark.Bytes:
 		// bytes: base64
 		if len(line) < 2 || line[0] != '"' || line[len(line)-1] != '"' {

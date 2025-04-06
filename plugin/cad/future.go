@@ -2,10 +2,10 @@ package cad
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/workflow"
 )
 
 type Future struct {
@@ -27,7 +27,7 @@ func (r *Future) Attr(n string) (starlark.Value, error) {
 }
 
 func (r *Future) Result(t *starlark.Thread) (starlark.Value, error) {
-	ctx := cadstar.GetContext(t)
+	ctx := service.GetContext(t)
 	var res starlark.Value
 	if err := r.Future.Get(ctx, &res); err != nil {
 		return nil, err

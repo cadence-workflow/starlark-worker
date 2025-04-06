@@ -3,9 +3,10 @@ package request
 import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
+	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/test/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
-	"go.uber.org/cadence/testsuite"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,27 +14,30 @@ import (
 
 type Suite struct {
 	suite.Suite
-	testsuite.WorkflowTestSuite
-	server *httptest.Server
-	env    *testsuite.TestActivityEnvironment
+	server        *httptest.Server
+	activitySuite types.StarTestActivitySuite
 }
 
-func TestIT(t *testing.T) { suite.Run(t, new(Suite)) }
+func TestITCadence(t *testing.T) {
+	suite.Run(t, &Suite{activitySuite: service.NewCadTestActivitySuite()})
+}
+
+func TestITTemporal(t *testing.T) {
+	suite.Run(t, &Suite{activitySuite: service.NewTempTestActivitySuite()})
+}
 
 func (r *Suite) SetupSuite()    { r.server = httptest.NewServer(ext.NewHTTPTestHandler(r.T())) }
 func (r *Suite) TearDownSuite() { r.server.Close() }
 
 func (r *Suite) BeforeTest(_, _ string) {
-	r.env = r.NewTestActivityEnvironment()
-	r.env.RegisterActivity(&activities{
+	r.activitySuite.RegisterActivity(&activities{
 		client: http.DefaultClient,
 	})
 }
 
 func (r *Suite) Test_DoJSON_Get404() {
-
 	resourceURL := fmt.Sprintf("%s/storage/%s.json", r.server.URL, uuid.New().String())
-	val, err := r.env.ExecuteActivity(Activities.DoJSON, JSONRequest{
+	val, err := r.activitySuite.ExecuteActivity(Activities.DoJSON, JSONRequest{
 		Method: "GET",
 		URL:    resourceURL,
 		Assert: Assert{

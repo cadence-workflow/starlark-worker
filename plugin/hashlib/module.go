@@ -3,10 +3,10 @@ package hashlib
 import (
 	"fmt"
 
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/blake2b"
 )
@@ -36,7 +36,7 @@ var builtins = map[string]*starlark.Builtin{
 //
 // Return: The calculated hash value
 func blake2b_hex(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	ctx := cadstar.GetContext(t)
+	ctx := service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
 	var data string
