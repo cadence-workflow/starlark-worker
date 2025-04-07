@@ -1,4 +1,4 @@
-load("@plugin", "cad", "time", "concurrent", "progress", "random")
+load("@plugin", "concurrent", "progress", "random", "time", "workflow")
 
 def wf(n = 10, sleep_duration_sec = 3):
     def task(i):
@@ -12,7 +12,7 @@ def wf(n = 10, sleep_duration_sec = 3):
 
     # print outputs will be in worker logs as if they were logged via workflow.GetLogger(ctx).Info()
     # print outputs are also queriable
-    print("concurrent_hello is called with n: %d, sleep_duration_sec: %d. run id is %s" % (n, sleep_duration_sec, cad.execution_run_id))
+    print("concurrent_hello is called with n: %d, sleep_duration_sec: %d. run id is %s" % (n, sleep_duration_sec, workflow.execution_run_id))
 
     random.seed(1234)
     futures = []

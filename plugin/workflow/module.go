@@ -1,4 +1,4 @@
-package cad
+package workflow
 
 import (
 	"fmt"

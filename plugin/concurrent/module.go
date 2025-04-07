@@ -3,7 +3,7 @@ package concurrent
 import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
-	"github.com/cadence-workflow/starlark-worker/plugin/cad"
+	pworkflow "github.com/cadence-workflow/starlark-worker/plugin/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
@@ -36,5 +36,5 @@ func run(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []
 		subT := service.CreateThread(ctx)
 		settable.Set(starlark.Call(subT, fn, args, kwargs))
 	})
-	return &cad.Future{Future: future}, nil
+	return &pworkflow.Future{Future: future}, nil
 }

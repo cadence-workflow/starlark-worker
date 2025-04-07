@@ -1,4 +1,4 @@
-package cad
+package workflow
 
 import (
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -6,7 +6,7 @@ import (
 	"go.starlark.net/starlark"
 )
 
-const pluginID = "cad"
+const pluginID = "workflow"
 
 var Plugin = &plugin{}
 

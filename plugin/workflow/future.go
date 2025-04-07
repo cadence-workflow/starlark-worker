@@ -1,4 +1,4 @@
-package cad
+package workflow
 
 import (
 	"fmt"
@@ -28,20 +28,11 @@ func (r *Future) Attr(n string) (starlark.Value, error) {
 
 func (r *Future) Result(t *starlark.Thread) (starlark.Value, error) {
 	ctx := service.GetContext(t)
-
-	// Debug: Log thread and context information
-	fmt.Printf("[DEBUG] Thread: %s\n", t.Name)
-	fmt.Printf("[DEBUG] Future.IsReady: %v\n", r.Future.IsReady())
-
 	var res starlark.Value
 	if err := r.Future.Get(ctx, &res); err != nil {
-		fmt.Printf("[DEBUG] Future.Get() error: %v\n", err)
 		return nil, err
 	}
-
-	fmt.Printf("[DEBUG] Future result retrieved: %v\n", res)
 	return res, nil
-
 }
 
 var futureBuiltins = map[string]*starlark.Builtin{

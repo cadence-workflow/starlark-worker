@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"github.com/cadence-workflow/starlark-worker/plugin/atexit"
-	"github.com/cadence-workflow/starlark-worker/plugin/cad"
 	"github.com/cadence-workflow/starlark-worker/plugin/concurrent"
 	"github.com/cadence-workflow/starlark-worker/plugin/hashlib"
 	"github.com/cadence-workflow/starlark-worker/plugin/json"
@@ -13,11 +12,12 @@ import (
 	"github.com/cadence-workflow/starlark-worker/plugin/test"
 	"github.com/cadence-workflow/starlark-worker/plugin/time"
 	"github.com/cadence-workflow/starlark-worker/plugin/uuid"
+	"github.com/cadence-workflow/starlark-worker/plugin/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
 )
 
 var Registry = map[string]service.IPlugin{
-	cad.Plugin.ID():        cad.Plugin,
+	workflow.Plugin.ID():   workflow.Plugin,
 	request.Plugin.ID():    request.Plugin,
 	time.Plugin.ID():       time.Plugin,
 	test.Plugin.ID():       test.Plugin,
