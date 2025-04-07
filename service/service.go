@@ -13,7 +13,6 @@ import (
 	"github.com/uber-go/tally"
 	"go.starlark.net/starlark"
 	"go.temporal.io/sdk/client"
-	"go.uber.org/cadence"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
 )
@@ -77,7 +76,8 @@ func (r *Service) Run(
 	defer func() {
 		if rec := recover(); rec != nil {
 			logger.Error("workflow-panic", zap.Any("panic", rec))
-			err = cadence.NewCustomError(
+			err = workflow.NewCustomError(
+				ctx,
 				yarpcerrors.CodeInternal.String(),
 				fmt.Sprintf("panic: %v", rec),
 			)
@@ -116,7 +116,8 @@ func (r *Service) Run(
 	var fs star.FS
 	if fs, err = star.NewTarFS(tar); err != nil {
 		logger.Error("workflow-error", ext.ZapError(err)...)
-		return nil, cadence.NewCustomError(
+		return nil, workflow.NewCustomError(
+			ctx,
 			yarpcerrors.CodeInvalidArgument.String(),
 			err.Error(),
 		)
@@ -184,8 +185,7 @@ func (r *Service) Run(
 	if res, err = star.Call(t, path, function, args, kwargs); err != nil {
 		logger.Error("workflow-error", ext.ZapError(err)...)
 
-		var canceledError *cadence.CanceledError
-		if errors.As(err, &canceledError) {
+		if workflow.IsCanceledError(ctx, err) {
 			globals.isCanceled = true
 			ctx, _ = workflow.NewDisconnectedContext(ctx)
 		}
@@ -232,20 +232,15 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 		logger.Error("starlark-backtrace", zap.String("backtrace", evalErr.Backtrace()))
 		details["backtrace"] = evalErr.Backtrace()
 	}
-	var cadenceErr *cadence.CustomError
 	var reason = yarpcerrors.CodeUnknown.String()
-	if errors.As(err, &cadenceErr) {
-		reason = cadenceErr.Reason()
-		if cadenceErr.HasDetails() {
-			var d any
-			if err := cadenceErr.Details(&d); err != nil {
-				logger.Error("workflow-error", ext.ZapError(err)...)
-				d = fmt.Sprintf("internal: error details extraction failure: %s", err.Error())
-			}
-			details["details"] = d
-		}
+	var isErr bool
+	var d string
+	if isErr, reason, d = workflow.CustomError(ctx, err); isErr {
+		logger.Error("workflow-error", ext.ZapError(err)...)
+		details["details"] = d
 	}
-	return cadence.NewCustomError(reason, details)
+
+	return workflow.NewCustomError(ctx, reason, details)
 }
 
 func (r *Service) Register(registry worker.Registry) {

@@ -31,6 +31,8 @@ type Workflow interface {
 	SideEffect(ctx Context, f func(ctx Context) interface{}) encoded.Value
 	Now(ctx Context) time.Time
 	Sleep(ctx Context, d time.Duration) (err error)
+	IsCanceledError(ctx Context, err error) bool
+	CustomError(ctx Context, err error) (bool, string, string)
 }
 
 func GetBackend(ctx Context) (Workflow, bool) {
@@ -177,4 +179,18 @@ func Sleep(ctx Context, d time.Duration) error {
 	}
 	time.Sleep(d)
 	return nil
+}
+
+func IsCanceledError(ctx Context, err error) bool {
+	if backend, ok := GetBackend(ctx); ok {
+		return backend.IsCanceledError(ctx, err)
+	}
+	return false
+}
+
+func CustomError(ctx Context, err error) (bool, string, string) {
+	if backend, ok := GetBackend(ctx); ok {
+		return backend.CustomError(ctx, err)
+	}
+	return false, "", ""
 }

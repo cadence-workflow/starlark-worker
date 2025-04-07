@@ -2,6 +2,8 @@ package temporal
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -49,6 +51,27 @@ func (c temporalBackend) RegisterWorker(url string, domain string, taskList stri
 }
 
 type temporalWorkflow struct{}
+
+func (w temporalWorkflow) CustomError(ctx workflow.Context, err error) (bool, string, string) {
+	var applicationError *temporal.ApplicationError
+	isCustomErr := errors.As(err, &applicationError)
+	if isCustomErr {
+		if applicationError.HasDetails() {
+			var d string
+			if err := applicationError.Details(&d); err != nil {
+				d = fmt.Sprintf("internal: error details extraction failure: %s", err.Error())
+			}
+			return isCustomErr, applicationError.Message(), d
+		}
+		return isCustomErr, applicationError.Message(), applicationError.Error()
+	}
+	return isCustomErr, "", ""
+}
+
+func (w temporalWorkflow) IsCanceledError(ctx workflow.Context, err error) bool {
+	var canceledError *temporal.CanceledError
+	return errors.As(err, &canceledError)
+}
 
 type workflowInfo struct {
 	context temp.Context
@@ -289,18 +312,18 @@ func (w temporalWorkflow) SetQueryHandler(ctx workflow.Context, queryType string
 }
 
 func (w temporalWorkflow) WithWorkflowDomain(ctx workflow.Context, name string) workflow.Context {
-	//TODO implement me
-	panic("implement me")
+	opts := workflow.ChildWorkflowOptions{
+		Domain: name,
+	}
+	return workflow.WithChildOptions(ctx.(temp.Context), opts)
 }
 
 func (w temporalWorkflow) WithWorkflowTaskList(ctx workflow.Context, name string) workflow.Context {
-	//TODO implement me
-	panic("implement me")
+	return temp.WithTaskQueue(ctx.(temp.Context), name)
 }
 
 func (w temporalWorkflow) NewCustomError(reason string, details ...interface{}) error {
-	//TODO implement me
-	panic("implement me")
+	return temporal.NewApplicationError(reason, "CustomError", details...)
 }
 
 func (w temporalWorkflow) NewFuture(ctx workflow.Context) (workflow.Future, workflow.Settable) {

@@ -2,6 +2,8 @@ package cadence
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
@@ -60,6 +62,26 @@ func (c cadenceBackend) RegisterWorker(url string, domain string, taskList strin
 }
 
 type cadenceWorkflow struct{}
+
+func (w cadenceWorkflow) CustomError(ctx workflow.Context, err error) (bool, string, string) {
+	var cadenceErr *cadence.CustomError
+	if errors.As(err, &cadenceErr) {
+		if cadenceErr.HasDetails() {
+			var d string
+			if err := cadenceErr.Details(&d); err != nil {
+				d = fmt.Sprintf("internal: error details extraction failure: %s", err.Error())
+			}
+			return true, cadenceErr.Reason(), d
+		}
+		return true, cadenceErr.Reason(), cadenceErr.Error()
+	}
+	return false, "", ""
+}
+
+func (w cadenceWorkflow) IsCanceledError(ctx workflow.Context, err error) bool {
+	var canceledError *cadence.CanceledError
+	return errors.As(err, &canceledError)
+}
 
 type workflowInfo struct {
 	context cad.Context
@@ -358,7 +380,6 @@ func NewInterface(location string) workflowserviceclient.Interface {
 			},
 		},
 	})
-	defer dispatcher.Stop()
 	if err := dispatcher.Start(); err != nil {
 		log.Fatalln(err)
 	}

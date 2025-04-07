@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/internal/cadence"
+	"github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"github.com/cadence-workflow/starlark-worker/plugin"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
-	cad "go.uber.org/cadence"
+	tempoarlsdk "go.temporal.io/sdk/temporal"
 	"io/fs"
 	"log"
 	"net/http/httptest"
@@ -18,39 +18,39 @@ import (
 	"testing"
 )
 
-type CadSuite struct {
+type TempSuite struct {
 	suite.Suite
-	service.StarCadTestSuite
+	service.StarTempTestSuite
 	httpHandler ext.HTTPTestHandler
 	server      *httptest.Server
-	env         *service.StarCadTestEnvironment
+	env         *service.StarTempTestEnvironment
 }
 
-func TestCad(t *testing.T) { suite.Run(t, new(CadSuite)) }
+func TestTemp(t *testing.T) { suite.Run(t, new(TempSuite)) }
 
-func (r *CadSuite) SetupSuite() {
+func (r *TempSuite) SetupSuite() {
 	r.httpHandler = ext.NewHTTPTestHandler(r.T())
 	r.server = httptest.NewServer(r.httpHandler)
 }
 
-func (r *CadSuite) SetupTest() {
-	r.env = r.NewCadEnvironment(r.T(), &service.StarCadTestEnvironmentParams{
+func (r *TempSuite) SetupTest() {
+	r.env = r.NewTempEnvironment(r.T(), &service.StarTempTestEnvironmentParams{
 		RootDirectory:  ".",
 		Plugins:        plugin.Registry,
-		DataConvertor:  &cadence.DataConverter{},
-		ServiceBackend: cadence.GetBackend(),
+		DataConvertor:  &temporal.DataConverter{},
+		ServiceBackend: temporal.GetBackend(),
 	})
 }
 
-func (r *CadSuite) TearDownTest() {
+func (r *TempSuite) TearDownTest() {
 	r.env.AssertExpectations(r.T())
 }
 
-func (r *CadSuite) TearDownSuite() {
+func (r *TempSuite) TearDownSuite() {
 	r.server.Close()
 }
 
-func (r *CadSuite) TestAll() {
+func (r *TempSuite) TestAll() {
 	var testFiles []string
 	err := filepath.WalkDir("testdata", func(entryPath string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -70,7 +70,7 @@ func (r *CadSuite) TestAll() {
 	}
 }
 
-func (r *CadSuite) TestAtExit() {
+func (r *TempSuite) TestAtExit() {
 	// clean up test server resources if any
 	resources := r.httpHandler.GetResources()
 	for k := range resources {
@@ -83,11 +83,11 @@ func (r *CadSuite) TestAtExit() {
 		require := r.Require()
 		require.Error(err)
 
-		var cadenceErr *cad.CustomError
-		require.True(errors.As(err, &cadenceErr))
+		var tempErr *tempoarlsdk.ApplicationError
+		require.True(errors.As(err, &tempErr))
 
 		var details map[string]any
-		require.NoError(cadenceErr.Details(&details))
+		require.NoError(tempErr.Details(&details))
 		require.NotNil(details["error"])
 		require.IsType("", details["error"])
 		require.True(strings.Contains(details["error"].(string), "injected error"), "Unexpected error details:\n%s", details)
@@ -97,7 +97,7 @@ func (r *CadSuite) TestAtExit() {
 	r.Require().Equal(0, len(resources), "Test server contains leaked resources:\n%v", resources)
 }
 
-func (r *CadSuite) runTestFile(filePath string) {
+func (r *TempSuite) runTestFile(filePath string) {
 
 	testFunctions, err := r.env.GetTestFunctions(filePath)
 	require := r.Require()
@@ -109,11 +109,11 @@ func (r *CadSuite) runTestFile(filePath string) {
 			var res any
 			if err := r.env.GetResult(&res); err != nil {
 				details := err.Error()
-				var customErr *cad.CustomError
+				var customErr *tempoarlsdk.ApplicationError
 				if errors.As(err, &customErr) && customErr.HasDetails() {
 					var d []byte
 					r.Require().NoError(customErr.Details(&d))
-					details = fmt.Sprintf("%s: %s", customErr.Reason(), d)
+					details = fmt.Sprintf("%s: %s", customErr.Message(), d)
 				}
 				r.Require().Fail(details)
 			}
@@ -121,7 +121,7 @@ func (r *CadSuite) runTestFile(filePath string) {
 	}
 }
 
-func (r *CadSuite) runTestFunction(filePath string, fn string, assert func()) {
+func (r *TempSuite) runTestFunction(filePath string, fn string, assert func()) {
 
 	r.Run(fmt.Sprintf("%s//%s", filePath, fn), func() {
 
