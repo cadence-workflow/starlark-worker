@@ -64,16 +64,16 @@ func (s DataConverter) ToString(payload *commonpb.Payload) string {
 func (s DataConverter) ToPayloads(values ...interface{}) (*commonpb.Payloads, error) {
 	if len(values) == 1 {
 		switch v := values[0].(type) {
-		case []byte:
+		case *[]byte:
 			return &commonpb.Payloads{
 				Payloads: []*commonpb.Payload{
-					{Data: v},
+					{Data: *v},
 				},
 			}, nil
-		case starlark.Bytes:
+		case *starlark.Bytes:
 			return &commonpb.Payloads{
 				Payloads: []*commonpb.Payload{
-					{Data: []byte(v)},
+					{Data: []byte(*v)},
 				},
 			}, nil
 		}

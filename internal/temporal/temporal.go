@@ -332,8 +332,8 @@ func (w temporalWorkflow) NewFuture(ctx workflow.Context) (workflow.Future, work
 }
 
 func (w temporalWorkflow) SideEffect(ctx workflow.Context, f func(ctx workflow.Context) interface{}) encoded.Value {
-	return temp.SideEffect(ctx.(temp.Context), func(ctx temp.Context) interface{} {
-		return f(ctx)
+	return temp.SideEffect(ctx.(temp.Context), func(c temp.Context) interface{} {
+		return f(c)
 	})
 }
 
@@ -346,8 +346,8 @@ func (w temporalWorkflow) Sleep(ctx workflow.Context, d time.Duration) (err erro
 }
 
 func (w temporalWorkflow) Go(ctx workflow.Context, f func(ctx workflow.Context)) {
-	temp.Go(ctx.(temp.Context), func(ctx temp.Context) {
-		f(ctx)
+	temp.Go(ctx.(temp.Context), func(c temp.Context) {
+		f(c)
 	})
 }
 
@@ -356,10 +356,11 @@ func NewClient(location string, namespace string) (client.Client, error) {
 		Prefix: "temporal",
 	}, time.Second)
 	options := client.Options{
-		HostPort:       location,
-		Namespace:      namespace,
-		DataConverter:  DataConverter{},
-		MetricsHandler: tally.NewMetricsHandler(scope),
+		HostPort:           location,
+		Namespace:          namespace,
+		DataConverter:      DataConverter{},
+		MetricsHandler:     tally.NewMetricsHandler(scope),
+		ContextPropagators: []temp.ContextPropagator{&HeadersContextPropagator{}},
 	}
 	go func() {
 		<-time.After(5 * time.Minute) // example shutdown trigger

@@ -131,6 +131,7 @@ func (r *StarTempTestSuite) NewTempEnvironment(t *testing.T, p *StarTempTestEnvi
 	env.SetWorkerOptions(tmpworker.Options{
 		BackgroundActivityContext: ctx,
 	})
+	env.SetContextPropagators([]tmpworkflow.ContextPropagator{&temporal.HeadersContextPropagator{}})
 	env.SetDataConverter(temporal.DataConverter{})
 	service := &Service{
 		Plugins:        p.Plugins,

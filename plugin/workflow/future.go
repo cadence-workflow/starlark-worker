@@ -16,8 +16,8 @@ var (
 	_ starlark.HasAttrs = (*Future)(nil)
 )
 
-func (r *Future) String() string        { return "cad.future" }
-func (r *Future) Type() string          { return "cad.future" }
+func (r *Future) String() string        { return "workflow.future" }
+func (r *Future) Type() string          { return "workflow.future" }
 func (r *Future) Freeze()               {}
 func (r *Future) Truth() starlark.Bool  { return true }
 func (r *Future) Hash() (uint32, error) { return 0, fmt.Errorf("no-hash") }
