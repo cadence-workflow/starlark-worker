@@ -10,7 +10,9 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
 	jsoniter "github.com/json-iterator/go"
+	"github.com/uber-go/tally"
 	"go.starlark.net/starlark"
+	"go.temporal.io/sdk/client"
 	"go.uber.org/cadence"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
@@ -204,7 +206,15 @@ func (r *Service) Run(
 			"run_id": exec.RunID(),
 			"error":  err.Error(),
 		}
-		workflow.GetMetricsScope(ctx).Tagged(tags).Gauge("workflow.error").Update(1)
+		scope := workflow.GetMetricsScope(ctx)
+		switch scope.(type) {
+		case tally.Scope:
+			scope.(tally.Scope).Tagged(tags).Gauge("workflow.error").Update(1)
+		case client.MetricsHandler:
+			scope.(client.MetricsHandler).WithTags(tags).Gauge("workflow.error").Update(1)
+		default:
+			logger.Warn("workflow-warning", zap.String("error", "unknown-metrics-scope-type"))
+		}
 	}
 	logger.Info("workflow-end")
 	return res, err

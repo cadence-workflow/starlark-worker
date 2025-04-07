@@ -7,11 +7,14 @@ toolchain go1.24.1
 require (
 	github.com/google/uuid v1.6.0
 	github.com/json-iterator/go v1.1.12
+	github.com/prometheus/client_golang v1.11.1
 	github.com/stretchr/testify v1.10.0
 	github.com/uber-go/tally v3.5.10+incompatible
+	github.com/uber-go/tally/v4 v4.1.1
 	go.starlark.net v0.0.0-20241125201518-c05ff208a98f
 	go.temporal.io/api v1.46.0
 	go.temporal.io/sdk v1.33.0
+	go.temporal.io/sdk/contrib/tally v0.2.0
 	go.uber.org/cadence v1.2.9
 	go.uber.org/multierr v1.11.0
 	go.uber.org/yarpc v1.75.2
@@ -42,8 +45,8 @@ require (
 	github.com/nexus-rpc/sdk-go v0.3.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect

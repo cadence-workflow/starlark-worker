@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
-	"github.com/uber-go/tally"
 	"go.uber.org/zap"
 	"time"
 )
@@ -16,7 +15,7 @@ type Workflow interface {
 	GetActivityLogger(ctx context.Context) *zap.Logger
 	WithValue(parent Context, key interface{}, val interface{}) Context
 	NewDisconnectedContext(parent Context) (ctx Context, cancel func())
-	GetMetricsScope(ctx Context) tally.Scope
+	GetMetricsScope(ctx Context) interface{}
 	ExecuteActivity(ctx Context, activity interface{}, args ...interface{}) Future
 	WithTaskList(ctx Context, name string) Context
 	GetInfo(ctx Context) IInfo
@@ -68,7 +67,7 @@ func NewDisconnectedContext(parent Context) (Context, func()) {
 	return nil, func() {}
 }
 
-func GetMetricsScope(ctx Context) tally.Scope {
+func GetMetricsScope(ctx Context) interface{} {
 	if backend, ok := GetBackend(ctx); ok {
 		return backend.GetMetricsScope(ctx)
 	}

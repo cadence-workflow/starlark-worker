@@ -6,10 +6,11 @@ import (
 	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
-	"github.com/uber-go/tally"
+	tallyv4 "github.com/uber-go/tally/v4"
 	enumspb "go.temporal.io/api/enums/v1"
 	tempactivity "go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/contrib/tally"
 	"go.temporal.io/sdk/temporal"
 	tmpworker "go.temporal.io/sdk/worker"
 	temp "go.temporal.io/sdk/workflow"
@@ -230,9 +231,9 @@ func (w temporalWorkflow) NewDisconnectedContext(parent workflow.Context) (ctx w
 	return temp.NewDisconnectedContext(parent.(temp.Context))
 }
 
-func (w temporalWorkflow) GetMetricsScope(ctx workflow.Context) tally.Scope {
-	//TODO implement me
-	panic("implement me")
+func (w temporalWorkflow) GetMetricsScope(ctx workflow.Context) interface{} {
+	return temp.GetMetricsHandler(ctx.(temp.Context))
+
 }
 
 func (w *temporalWorkflow) WithTaskList(ctx workflow.Context, name string) workflow.Context {
@@ -303,8 +304,8 @@ func (w temporalWorkflow) NewCustomError(reason string, details ...interface{}) 
 }
 
 func (w temporalWorkflow) NewFuture(ctx workflow.Context) (workflow.Future, workflow.Settable) {
-	//TODO implement me
-	panic("implement me")
+	f, s := temp.NewFuture(ctx.(temp.Context))
+	return &temporalFuture{f: f}, &temporalSettable{s: s}
 }
 
 func (w temporalWorkflow) SideEffect(ctx workflow.Context, f func(ctx workflow.Context) interface{}) encoded.Value {
@@ -328,11 +329,19 @@ func (w temporalWorkflow) Go(ctx workflow.Context, f func(ctx workflow.Context))
 }
 
 func NewClient(location string, namespace string) (client.Client, error) {
+	scope, closer := tallyv4.NewRootScope(tallyv4.ScopeOptions{
+		Prefix: "temporal",
+	}, time.Second)
 	options := client.Options{
-		HostPort:      location,
-		Namespace:     namespace,
-		DataConverter: DataConverter{},
+		HostPort:       location,
+		Namespace:      namespace,
+		DataConverter:  DataConverter{},
+		MetricsHandler: tally.NewMetricsHandler(scope),
 	}
+	go func() {
+		<-time.After(5 * time.Minute) // example shutdown trigger
+		closer.Close()
+	}()
 
 	// Use NewLazyClient to create a lazy-initialized client
 	return client.Dial(options)

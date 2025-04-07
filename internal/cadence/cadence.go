@@ -227,7 +227,7 @@ func (w cadenceWorkflow) NewDisconnectedContext(parent workflow.Context) (ctx wo
 	return cad.NewDisconnectedContext(parent.(cad.Context))
 }
 
-func (w cadenceWorkflow) GetMetricsScope(ctx workflow.Context) tally.Scope {
+func (w cadenceWorkflow) GetMetricsScope(ctx workflow.Context) interface{} {
 	return cad.GetMetricsScope(ctx.(cad.Context))
 }
 
