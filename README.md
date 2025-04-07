@@ -17,7 +17,7 @@ This section is intended for contributors. Below are the instructions for settin
 
 3. **Start the Starlark Worker**:
    ```sh
-   go run .
+   go run ./cmd/service 
    ```
 
 4. **Run a test workflow**:

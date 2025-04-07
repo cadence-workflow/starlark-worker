@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
-	"github.com/cadence-workflow/starlark-worker/internal/encoded"
-	"github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/temporal"
 	"github.com/cadence-workflow/starlark-worker/test/types"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/resolve"
@@ -121,7 +120,6 @@ type StarTempTestSuite struct {
 type StarTempTestEnvironmentParams struct {
 	RootDirectory  string
 	Plugins        map[string]IPlugin
-	DataConvertor  encoded.DataConvertor
 	ServiceBackend backend.Backend
 }
 
@@ -133,11 +131,8 @@ func (r *StarTempTestSuite) NewTempEnvironment(t *testing.T, p *StarTempTestEnvi
 	})
 	env.SetContextPropagators([]tmpworkflow.ContextPropagator{&temporal.HeadersContextPropagator{}})
 	env.SetDataConverter(temporal.DataConverter{})
-	service := &Service{
-		Plugins:        p.Plugins,
-		ClientTaskList: "test",
-		Backend:        p.ServiceBackend,
-	}
+	service, serviceErr := NewService(p.Plugins, "test", TemporalBackend)
+	require.NoError(t, serviceErr)
 
 	service.Register(tempRegistry{env: env})
 

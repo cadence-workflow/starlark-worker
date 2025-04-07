@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"github.com/cadence-workflow/starlark-worker/plugin"
 	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/temporal"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
 	tempoarlsdk "go.temporal.io/sdk/temporal"
@@ -37,7 +37,6 @@ func (r *TempSuite) SetupTest() {
 	r.env = r.NewTempEnvironment(r.T(), &service.StarTempTestEnvironmentParams{
 		RootDirectory:  ".",
 		Plugins:        plugin.Registry,
-		DataConvertor:  &temporal.DataConverter{},
 		ServiceBackend: temporal.GetBackend(),
 	})
 }

@@ -3,8 +3,8 @@ package test
 import (
 	"errors"
 	"fmt"
+	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/internal/cadence"
 	"github.com/cadence-workflow/starlark-worker/plugin"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/stretchr/testify/suite"
@@ -37,7 +37,6 @@ func (r *CadSuite) SetupTest() {
 	r.env = r.NewCadEnvironment(r.T(), &service.StarCadTestEnvironmentParams{
 		RootDirectory:  ".",
 		Plugins:        plugin.Registry,
-		DataConvertor:  &cadence.DataConverter{},
 		ServiceBackend: cadence.GetBackend(),
 	})
 }

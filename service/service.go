@@ -4,17 +4,26 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/temporal"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/uber-go/tally"
 	"go.starlark.net/starlark"
 	"go.temporal.io/sdk/client"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"
+)
+
+type BackendType string
+
+const (
+	CadenceBackend  BackendType = "cadence"
+	TemporalBackend BackendType = "temporal"
 )
 
 var builtins = starlark.StringDict{
@@ -51,7 +60,25 @@ type Service struct {
 	Plugins        map[string]IPlugin
 	ClientTaskList string
 
-	Backend backend.Backend
+	backend backend.Backend
+}
+
+func NewService(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
+	var be backend.Backend
+	switch backendType {
+	case CadenceBackend:
+		be = cadence.GetBackend()
+	case TemporalBackend:
+		be = temporal.GetBackend()
+	default:
+		return nil, fmt.Errorf("unsupported backend: %s", backendType)
+	}
+
+	return &Service{
+		ClientTaskList: clientTaskList,
+		Plugins:        plugins,
+		backend:        be,
+	}, nil
 }
 
 // TODO: [feature] Cadence workflow with starlark REPL (event listener loop?) starlark.ExecREPLChunk()
@@ -68,8 +95,11 @@ func (r *Service) Run(
 	res starlark.Value,
 	err error,
 ) {
+	if r.backend == nil {
+		return nil, fmt.Errorf("backend not initialized")
+	}
 
-	ctx = workflow.WithBackend(ctx, r.Backend.RegisterWorkflow())
+	ctx = workflow.WithBackend(ctx, r.backend.RegisterWorkflow())
 
 	logger := workflow.GetLogger(ctx)
 
@@ -241,6 +271,10 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 	}
 
 	return workflow.NewCustomError(ctx, reason, details)
+}
+
+func (r *Service) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
+	return r.backend.RegisterWorker(url, domain, taskList, logger)
 }
 
 func (r *Service) Register(registry worker.Registry) {

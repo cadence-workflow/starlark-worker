@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/internal/backend"
-	"github.com/cadence-workflow/starlark-worker/internal/cadence"
-	"github.com/cadence-workflow/starlark-worker/internal/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
@@ -132,7 +131,6 @@ type StarCadTestSuite struct {
 type StarCadTestEnvironmentParams struct {
 	RootDirectory  string
 	Plugins        map[string]IPlugin
-	DataConvertor  encoded.DataConvertor
 	ServiceBackend backend.Backend
 }
 
@@ -144,15 +142,12 @@ func (r *StarCadTestSuite) NewCadEnvironment(t *testing.T, p *StarCadTestEnviron
 	env := r.NewTestWorkflowEnvironment()
 	env.SetWorkerOptions(cadworker.Options{
 		Logger:                    logger,
-		DataConverter:             p.DataConvertor,
+		DataConverter:             &cadence.DataConverter{},
 		BackgroundActivityContext: ctx,
 	})
 
-	service := &Service{
-		Plugins:        p.Plugins,
-		ClientTaskList: "test",
-		Backend:        p.ServiceBackend,
-	}
+	service, serviceErr := NewService(p.Plugins, "test", CadenceBackend)
+	require.NoError(t, serviceErr)
 	service.Register(cadRegistry{env: env})
 
 	if r.tarCache == nil {

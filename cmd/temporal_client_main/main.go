@@ -12,6 +12,7 @@ import (
 
 	temporalclient "github.com/cadence-workflow/starlark-worker/client/temporal_client"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/temporal"
 
 	"go.starlark.net/starlark"
 	"go.temporal.io/sdk/client"
@@ -155,8 +156,9 @@ func __run__(_args []string) {
 	defer logger.Sync()
 
 	c, err := client.Dial(client.Options{
-		HostPort:  temporalEndpoint,
-		Namespace: namespace,
+		HostPort:      temporalEndpoint,
+		Namespace:     namespace,
+		DataConverter: temporal.DataConverter{},
 	})
 	if err != nil {
 		log.Fatal(err)
