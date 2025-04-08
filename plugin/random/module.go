@@ -5,8 +5,8 @@ import (
 	"math/rand"
 
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.starlark.net/starlark"
 	"go.uber.org/zap"
 )

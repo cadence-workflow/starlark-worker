@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/internal/backend"
-	"github.com/cadence-workflow/starlark-worker/internal/encoded"
-	"github.com/cadence-workflow/starlark-worker/internal/worker"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/backend"
+	"github.com/cadence-workflow/starlark-worker/encoded"
+	"github.com/cadence-workflow/starlark-worker/worker"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"github.com/uber-go/tally"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/.gen/go/cadence/workflowserviceclient"
@@ -38,15 +38,15 @@ func (c cadenceBackend) RegisterWorkflow() workflow.Workflow {
 
 var _ backend.Backend = (*cadenceBackend)(nil)
 
-func (c cadenceBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
+func (c cadenceBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger, workerOptions interface{}) worker.Worker {
 	cadInterface := NewInterface(url)
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "backendContextKey", cadenceWorkflow{})
-	worker := cadworker.New(
-		cadInterface,
-		domain,
-		taskList,
-		cadworker.Options{
+	var option *cadworker.Options
+	if workerOptions != nil {
+		option = workerOptions.(*cadworker.Options)
+	} else {
+		option = &cadworker.Options{
 			MetricsScope: tally.NoopScope,
 			Logger:       logger,
 			DataConverter: &DataConverter{
@@ -56,7 +56,13 @@ func (c cadenceBackend) RegisterWorker(url string, domain string, taskList strin
 				&HeadersContextPropagator{},
 			},
 			BackgroundActivityContext: ctx,
-		},
+		}
+	}
+	worker := cadworker.New(
+		cadInterface,
+		domain,
+		taskList,
+		*option,
 	)
 	return &cadenceWorker{w: worker}
 }

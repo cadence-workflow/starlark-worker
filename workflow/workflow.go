@@ -3,7 +3,7 @@ package workflow
 import (
 	"context"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/internal/encoded"
+	"github.com/cadence-workflow/starlark-worker/encoded"
 	"go.uber.org/zap"
 	"time"
 )

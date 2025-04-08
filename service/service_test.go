@@ -3,18 +3,18 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/internal/temporal"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
 	"go.uber.org/zap"
 
-	"github.com/cadence-workflow/starlark-worker/internal/activity"
-	"github.com/cadence-workflow/starlark-worker/internal/cadence"
-	"github.com/cadence-workflow/starlark-worker/internal/worker"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/activity"
+	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/temporal"
+	"github.com/cadence-workflow/starlark-worker/worker"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 )
 
 type TestPlugin struct{}
@@ -86,7 +86,6 @@ func (r *CadTest) SetupTest() {
 		RootDirectory:  "testdata",
 		Plugins:        map[string]IPlugin{tp.ID(): tp},
 		ServiceBackend: cadence.GetBackend(),
-		DataConvertor:  &cadence.DataConverter{},
 	})
 }
 

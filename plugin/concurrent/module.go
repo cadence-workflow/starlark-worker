@@ -2,10 +2,10 @@ package concurrent
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	pworkflow "github.com/cadence-workflow/starlark-worker/plugin/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.starlark.net/starlark"
 )
 

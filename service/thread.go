@@ -3,7 +3,7 @@ package service
 import (
 	"strconv"
 
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.starlark.net/starlark"
 	"go.uber.org/zap"
 )

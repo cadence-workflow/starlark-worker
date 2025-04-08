@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.uber.org/yarpc/yarpcerrors"
 	"time"
 )

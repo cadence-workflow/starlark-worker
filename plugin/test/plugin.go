@@ -1,8 +1,8 @@
 package test
 
 import (
-	"github.com/cadence-workflow/starlark-worker/internal/worker"
 	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/worker"
 	"go.starlark.net/starlark"
 )
 

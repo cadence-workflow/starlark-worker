@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/cadence-workflow/starlark-worker/internal/worker"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/worker"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.starlark.net/starlark"
 )
 

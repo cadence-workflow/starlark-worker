@@ -4,13 +4,13 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"github.com/cadence-workflow/starlark-worker/backend"
 	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/internal/backend"
-	"github.com/cadence-workflow/starlark-worker/internal/worker"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"github.com/cadence-workflow/starlark-worker/temporal"
+	"github.com/cadence-workflow/starlark-worker/worker"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/uber-go/tally"
 	"go.starlark.net/starlark"
@@ -273,8 +273,8 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 	return workflow.NewCustomError(ctx, reason, details)
 }
 
-func (r *Service) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
-	return r.backend.RegisterWorker(url, domain, taskList, logger)
+func (r *Service) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger, workerOptions interface{}) worker.Worker {
+	return r.backend.RegisterWorker(url, domain, taskList, logger, workerOptions)
 }
 
 func (r *Service) Register(registry worker.Registry) {

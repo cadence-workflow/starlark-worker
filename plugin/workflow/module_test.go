@@ -4,9 +4,9 @@ import (
 	"go.starlark.net/starlark"
 	"testing"
 
-	cad "github.com/cadence-workflow/starlark-worker/internal/cadence"
-	tem "github.com/cadence-workflow/starlark-worker/internal/temporal"
+	cad "github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/service"
+	tem "github.com/cadence-workflow/starlark-worker/temporal"
 	"github.com/stretchr/testify/require"
 )
 

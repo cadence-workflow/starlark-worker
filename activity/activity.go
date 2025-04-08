@@ -2,7 +2,7 @@ package activity
 
 import (
 	"context"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.uber.org/zap"
 )
 

@@ -3,9 +3,9 @@ package workflow
 import (
 	"fmt"
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.starlark.net/starlark"
 	"go.uber.org/yarpc/yarpcerrors"
 	"go.uber.org/zap"

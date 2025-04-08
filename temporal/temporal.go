@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/internal/backend"
-	"github.com/cadence-workflow/starlark-worker/internal/encoded"
-	"github.com/cadence-workflow/starlark-worker/internal/worker"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/backend"
+	"github.com/cadence-workflow/starlark-worker/encoded"
+	"github.com/cadence-workflow/starlark-worker/worker"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	tallyv4 "github.com/uber-go/tally/v4"
 	enumspb "go.temporal.io/api/enums/v1"
 	tempactivity "go.temporal.io/sdk/activity"
@@ -33,21 +33,26 @@ func (c temporalBackend) RegisterWorkflow() workflow.Workflow {
 	return &temporalWorkflow{}
 }
 
-func (c temporalBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
-	client, err := NewClient(url, domain)
+func (c temporalBackend) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger, workerOptions interface{}) worker.Worker {
+	var option *client.Options
+	if workerOptions != nil {
+		option = workerOptions.(*client.Options)
+	}
+	newClient, err := NewClient(url, domain, option)
 	if err != nil {
 		panic("failed to create temporal client")
 	}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "backendContextKey", temporalWorkflow{})
-	worker := tmpworker.New(
-		client,
+
+	w := tmpworker.New(
+		newClient,
 		taskList,
 		tmpworker.Options{
 			BackgroundActivityContext: ctx,
 		},
 	)
-	return &temporalWorker{w: worker}
+	return &temporalWorker{w: w}
 }
 
 type temporalWorkflow struct{}
@@ -351,16 +356,23 @@ func (w temporalWorkflow) Go(ctx workflow.Context, f func(ctx workflow.Context))
 	})
 }
 
-func NewClient(location string, namespace string) (client.Client, error) {
+func NewClient(location string, namespace string, clientOptions *client.Options) (client.Client, error) {
 	scope, closer := tallyv4.NewRootScope(tallyv4.ScopeOptions{
 		Prefix: "temporal",
 	}, time.Second)
-	options := client.Options{
-		HostPort:           location,
-		Namespace:          namespace,
-		DataConverter:      DataConverter{},
-		MetricsHandler:     tally.NewMetricsHandler(scope),
-		ContextPropagators: []temp.ContextPropagator{&HeadersContextPropagator{}},
+	var options *client.Options
+	if clientOptions == nil {
+		options = &client.Options{
+			HostPort:           location,
+			Namespace:          namespace,
+			DataConverter:      DataConverter{},
+			MetricsHandler:     tally.NewMetricsHandler(scope),
+			ContextPropagators: []temp.ContextPropagator{&HeadersContextPropagator{}},
+		}
+	} else {
+		options = clientOptions
+		options.HostPort = location
+		options.Namespace = namespace
 	}
 	go func() {
 		<-time.After(5 * time.Minute) // example shutdown trigger
@@ -368,5 +380,5 @@ func NewClient(location string, namespace string) (client.Client, error) {
 	}()
 
 	// Use NewLazyClient to create a lazy-initialized client
-	return client.Dial(options)
+	return client.Dial(*options)
 }

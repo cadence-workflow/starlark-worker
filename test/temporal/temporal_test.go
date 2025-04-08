@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cadence-workflow/starlark-worker/internal/temporal"
+	"github.com/cadence-workflow/starlark-worker/temporal"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	temp "go.temporal.io/sdk/temporal"

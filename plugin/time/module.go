@@ -2,7 +2,7 @@ package time
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/internal/workflow"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"strings"
 	"time"
 
