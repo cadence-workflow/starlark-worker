@@ -3,8 +3,11 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/plugin"
 	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/temporal"
+	"github.com/cadence-workflow/starlark-worker/worker"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -82,18 +85,22 @@ func main() {
 
 	logger.Info("Options", zap.Any("Options", opt))
 
-	backend := service.CadenceBackend
-	if opt.Backend == "temporal" {
+	var newWorker worker.Worker
+	var backend service.BackendType
+	if opt.Backend == "cadence" || opt.Backend == "" {
+		newWorker = cadence.NewWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
+		backend = service.CadenceBackend
+	} else if opt.Backend == "temporal" {
 		backend = service.TemporalBackend
+		newWorker = temporal.NewWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList)
 	}
 	workerService, err := service.NewService(plugin.Registry, opt.ClientTaskList, backend)
 	if err != nil {
 		panic(err)
 	}
-	serviceWorker := workerService.RegisterWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
-	workerService.Register(serviceWorker)
+	workerService.Register(newWorker)
 
-	if err := serviceWorker.Start(); err != nil {
+	if err := newWorker.Start(); err != nil {
 		logger.Fatal("Start", zap.Error(err))
 	}
 
@@ -102,6 +109,6 @@ func main() {
 	logger.Info("Server started. Press CTRL+C to exit.")
 
 	<-sig
-	serviceWorker.Stop()
+	newWorker.Stop()
 	logger.Info("EXIT.")
 }

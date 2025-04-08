@@ -1,4 +1,4 @@
-package cadence
+package internal
 
 import (
 	"github.com/stretchr/testify/require"
@@ -9,14 +9,14 @@ import (
 	"testing"
 )
 
-// TestStruct test struct.
-type TestStruct struct {
+// TemporalTestStruct test struct.
+type TemporalTestStruct struct {
 	ID int `json:"id"`
 }
 
 // TestToData tests that the converter can encode Go and Starlark values into bytes.
-func TestToData(t *testing.T) {
-	converter := newTestConverter(t)
+func TestTemporalToData(t *testing.T) {
+	converter := newTemporalTestConverter(t)
 
 	t.Run("encode-go-bytes", func(t *testing.T) {
 		// Assert the encoder can encode Go bytes as-is.
@@ -34,13 +34,13 @@ func TestToData(t *testing.T) {
 
 	t.Run("encode-go-map", func(t *testing.T) {
 		// Assert the encoder can encode Go struct as JSON object.
-		data, err := converter.ToData(TestStruct{ID: 101})
+		data, err := converter.ToData(TemporalTestStruct{ID: 101})
 		require.NoError(t, err)
 		require.Equal(t, []byte("{\"id\":101}\n"), data)
 	})
 
 	t.Run("encode-several-values", func(t *testing.T) {
-		// Assert the encoder can encode several values using the delimiter.
+		// Assert the encoder can encode several values using the cadenceDelimiter.
 		data, err := converter.ToData(
 			starlark.Tuple{starlark.String("pi"), starlark.Float(3.14)},
 			true,
@@ -51,8 +51,8 @@ func TestToData(t *testing.T) {
 }
 
 // TestFromData tests that the converter can decode bytes into Go and Starlark values.
-func TestFromData(t *testing.T) {
-	converter := newTestConverter(t)
+func TestTemporalFromData(t *testing.T) {
+	converter := newTemporalTestConverter(t)
 
 	t.Run("decode-go-bytes", func(t *testing.T) {
 		// Assert the encoder can decode into Go bytes as-is.
@@ -70,16 +70,16 @@ func TestFromData(t *testing.T) {
 
 	t.Run("decode-go-struct", func(t *testing.T) {
 		// Assert the encoder can decode a JSON object into a Go struct.
-		var out TestStruct
+		var out TemporalTestStruct
 		require.NoError(t, converter.FromData([]byte("{\"id\":101}\n"), &out))
-		require.Equal(t, TestStruct{ID: 101}, out)
+		require.Equal(t, TemporalTestStruct{ID: 101}, out)
 	})
 
-	t.Run("decode-no-delimiter", func(t *testing.T) {
-		// Assert the encoder can handle the case when the delimiter is missing in the end.
-		var out TestStruct
+	t.Run("decode-no-cadenceDelimiter", func(t *testing.T) {
+		// Assert the encoder can handle the case when the cadenceDelimiter is missing in the end.
+		var out TemporalTestStruct
 		require.NoError(t, converter.FromData([]byte("{\"id\":101}"), &out))
-		require.Equal(t, TestStruct{ID: 101}, out)
+		require.Equal(t, TemporalTestStruct{ID: 101}, out)
 	})
 
 	t.Run("decode-several", func(t *testing.T) {
@@ -102,7 +102,7 @@ func TestFromData(t *testing.T) {
 	})
 }
 
-func newTestConverter(t *testing.T) encoded.DataConverter {
+func newTemporalTestConverter(t *testing.T) encoded.DataConverter {
 	logger := zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel))
-	return &DataConverter{Logger: logger}
+	return &CadenceDataConverter{Logger: logger}
 }

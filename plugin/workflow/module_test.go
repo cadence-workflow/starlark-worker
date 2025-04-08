@@ -4,9 +4,7 @@ import (
 	"go.starlark.net/starlark"
 	"testing"
 
-	cad "github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/service"
-	tem "github.com/cadence-workflow/starlark-worker/temporal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,9 +55,8 @@ func TestCadenceRunner(t *testing.T) {
 	runTestSuite(t, "Cadence", func(t *testing.T) env {
 		suite := &service.StarCadTestSuite{}
 		return suite.NewCadEnvironment(t, &service.StarCadTestEnvironmentParams{
-			RootDirectory:  "testdata",
-			Plugins:        map[string]service.IPlugin{Plugin.ID(): Plugin},
-			ServiceBackend: cad.GetBackend(),
+			RootDirectory: "testdata",
+			Plugins:       map[string]service.IPlugin{Plugin.ID(): Plugin},
 		})
 	})
 }
@@ -68,9 +65,8 @@ func TestTemporalRunner(t *testing.T) {
 	runTestSuite(t, "Temporal", func(t *testing.T) env {
 		suite := &service.StarTempTestSuite{}
 		return suite.NewTempEnvironment(t, &service.StarTempTestEnvironmentParams{
-			RootDirectory:  "testdata",
-			Plugins:        map[string]service.IPlugin{Plugin.ID(): Plugin},
-			ServiceBackend: tem.GetBackend(),
+			RootDirectory: "testdata",
+			Plugins:       map[string]service.IPlugin{Plugin.ID(): Plugin},
 		})
 	})
 }

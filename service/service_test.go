@@ -10,9 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/cadence-workflow/starlark-worker/activity"
-	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/star"
-	"github.com/cadence-workflow/starlark-worker/temporal"
 	"github.com/cadence-workflow/starlark-worker/worker"
 	"github.com/cadence-workflow/starlark-worker/workflow"
 )
@@ -83,9 +81,8 @@ func (r *CadTest) SetupSuite() {}
 func (r *CadTest) SetupTest() {
 	tp := &TestPlugin{}
 	r.env = r.NewCadEnvironment(r.T(), &StarCadTestEnvironmentParams{
-		RootDirectory:  "testdata",
-		Plugins:        map[string]IPlugin{tp.ID(): tp},
-		ServiceBackend: cadence.GetBackend(),
+		RootDirectory: "testdata",
+		Plugins:       map[string]IPlugin{tp.ID(): tp},
 	})
 }
 
@@ -130,9 +127,8 @@ func (r *TempTest) SetupSuite() {}
 func (r *TempTest) SetupTest() {
 	tp := &TestPlugin{}
 	r.env = r.NewTempEnvironment(r.T(), &StarTempTestEnvironmentParams{
-		RootDirectory:  "testdata",
-		Plugins:        map[string]IPlugin{tp.ID(): tp},
-		ServiceBackend: temporal.GetBackend(),
+		RootDirectory: "testdata",
+		Plugins:       map[string]IPlugin{tp.ID(): tp},
 	})
 }
 

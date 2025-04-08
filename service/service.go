@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/backend"
 	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/star"
@@ -60,16 +59,16 @@ type Service struct {
 	Plugins        map[string]IPlugin
 	ClientTaskList string
 
-	backend backend.Backend
+	workflow workflow.Workflow
 }
 
 func NewService(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
-	var be backend.Backend
+	var be workflow.Workflow
 	switch backendType {
 	case CadenceBackend:
-		be = cadence.GetBackend()
+		be = cadence.NewWorkflow()
 	case TemporalBackend:
-		be = temporal.GetBackend()
+		be = temporal.NewWorkflow()
 	default:
 		return nil, fmt.Errorf("unsupported backend: %s", backendType)
 	}
@@ -77,7 +76,7 @@ func NewService(plugins map[string]IPlugin, clientTaskList string, backendType B
 	return &Service{
 		ClientTaskList: clientTaskList,
 		Plugins:        plugins,
-		backend:        be,
+		workflow:       be,
 	}, nil
 }
 
@@ -95,11 +94,11 @@ func (r *Service) Run(
 	res starlark.Value,
 	err error,
 ) {
-	if r.backend == nil {
+	if r.workflow == nil {
 		return nil, fmt.Errorf("backend not initialized")
 	}
 
-	ctx = workflow.WithBackend(ctx, r.backend.RegisterWorkflow())
+	ctx = workflow.WithBackend(ctx, r.workflow)
 
 	logger := workflow.GetLogger(ctx)
 
@@ -271,10 +270,6 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 	}
 
 	return workflow.NewCustomError(ctx, reason, details)
-}
-
-func (r *Service) RegisterWorker(url string, domain string, taskList string, logger *zap.Logger, workerOptions interface{}) worker.Worker {
-	return r.backend.RegisterWorker(url, domain, taskList, logger, workerOptions)
 }
 
 func (r *Service) Register(registry worker.Registry) {

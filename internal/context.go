@@ -1,4 +1,4 @@
-package workflow
+package internal
 
 type IChannel interface {
 	Receive(ctx Context, valuePtr interface{}) (ok bool)
