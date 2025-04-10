@@ -214,7 +214,8 @@ func (r *Service) Run(
 	if res, err = star.Call(t, path, function, args, kwargs); err != nil {
 		logger.Error("workflow-error", ext.ZapError(err)...)
 
-		if workflow.IsCanceledError(ctx, err) {
+		var canceledErr workflow.CanceledError
+		if errors.As(err, &canceledErr) {
 			globals.isCanceled = true
 			ctx, _ = workflow.NewDisconnectedContext(ctx)
 		}
@@ -261,14 +262,19 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 		logger.Error("starlark-backtrace", zap.String("backtrace", evalErr.Backtrace()))
 		details["backtrace"] = evalErr.Backtrace()
 	}
+	var workflowErr workflow.CustomError
 	var reason = yarpcerrors.CodeUnknown.String()
-	var isErr bool
-	var d string
-	if isErr, reason, d = workflow.CustomError(ctx, err); isErr {
-		logger.Error("workflow-error", ext.ZapError(err)...)
-		details["details"] = d
+	if errors.As(err, &workflowErr) {
+		reason = workflowErr.Reason()
+		if workflowErr.HasDetails() {
+			var d any
+			if err := workflowErr.Details(&d); err != nil {
+				logger.Error("workflow-error", ext.ZapError(err)...)
+				d = fmt.Sprintf("internal: error details extraction failure: %s", err.Error())
+			}
+			details["details"] = d
+		}
 	}
-
 	return workflow.NewCustomError(ctx, reason, details)
 }
 

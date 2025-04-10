@@ -8,7 +8,7 @@ import (
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
-	tempoarlsdk "go.temporal.io/sdk/temporal"
+	temporalsdk "go.temporal.io/sdk/temporal"
 	"io/fs"
 	"log"
 	"net/http/httptest"
@@ -80,14 +80,15 @@ func (r *TempSuite) TestAtExit() {
 		require := r.Require()
 		require.Error(err)
 
-		var tempErr *tempoarlsdk.ApplicationError
-		require.True(errors.As(err, &tempErr))
+		//var tempErr workflow.CustomError
 
-		var details map[string]any
-		require.NoError(tempErr.Details(&details))
-		require.NotNil(details["error"])
-		require.IsType("", details["error"])
-		require.True(strings.Contains(details["error"].(string), "injected error"), "Unexpected error details:\n%s", details)
+		var werr *temporalsdk.WorkflowExecutionError
+		errors.As(err, &werr)
+		tempErr := werr.Unwrap().(*temporalsdk.ApplicationError)
+
+		require.True(errors.As(err, &tempErr))
+		require.Equal("assert\nExpected : 200\nActual   : 404 (type: assert\nExpected : 200\nActual   : 404, retryable: true)", tempErr.Message())
+		require.Equal("TemporalCustomError", tempErr.Type())
 	})
 
 	// make sure the test run did not leak any resources on the test server
@@ -106,7 +107,7 @@ func (r *TempSuite) runTestFile(filePath string) {
 			var res any
 			if err := r.env.GetResult(&res); err != nil {
 				details := err.Error()
-				var customErr *tempoarlsdk.ApplicationError
+				var customErr *temporalsdk.ApplicationError
 				if errors.As(err, &customErr) && customErr.HasDetails() {
 					var d []byte
 					r.Require().NoError(customErr.Details(&d))

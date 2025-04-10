@@ -4,6 +4,19 @@ import (
 	"time"
 )
 
+type CustomError interface {
+	Error() string
+	Reason() string
+	HasDetails() bool
+	Details(d ...interface{}) error
+}
+
+type CanceledError interface {
+	Error() string
+	HasDetails() bool
+	Details(d ...interface{}) error
+}
+
 type ChildWorkflowOptions struct {
 	// Domain of the child workflow.
 	// Optional: the current workflow (parent)'s domain will be used if this is not provided.

@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"fmt"
 	"github.com/cadence-workflow/starlark-worker/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal"
 	"go.uber.org/zap"
@@ -28,6 +27,10 @@ type (
 	ChildWorkflowFuture = internal.ChildWorkflowFuture
 
 	RetryPolicy = internal.RetryPolicy
+
+	CustomError = internal.CustomError
+
+	CanceledError = internal.CanceledError
 )
 
 func GetBackend(ctx Context) (Workflow, bool) {
@@ -134,11 +137,11 @@ func ExecuteChildWorkflow(ctx Context, childWorkflow interface{}, args ...interf
 	return nil
 }
 
-func NewCustomError(ctx Context, reason string, details ...interface{}) error {
+func NewCustomError(ctx Context, reason string, details ...interface{}) CustomError {
 	if backend, ok := GetBackend(ctx); ok {
 		return backend.NewCustomError(reason, details...)
 	}
-	return fmt.Errorf("custom error: %s", reason)
+	return nil
 }
 
 func NewFuture(ctx Context) (Future, Settable) {
@@ -183,9 +186,9 @@ func IsCanceledError(ctx Context, err error) bool {
 	return false
 }
 
-func CustomError(ctx Context, err error) (bool, string, string) {
+func WithRetryPolicy(ctx Context, retryPolicy RetryPolicy) Context {
 	if backend, ok := GetBackend(ctx); ok {
-		return backend.CustomError(ctx, err)
+		return backend.WithRetryPolicy(ctx, retryPolicy)
 	}
-	return false, "", ""
+	return ctx
 }

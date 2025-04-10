@@ -10,13 +10,20 @@ import (
 	"go.temporal.io/sdk/contrib/tally"
 	tempworker "go.temporal.io/sdk/worker"
 	temp "go.temporal.io/sdk/workflow"
+	"go.uber.org/zap"
 	"reflect"
 	"time"
 )
 
 type (
 	DataConverter = internal.TemporalDataConverter
+
+	CustomError = internal.TemporalCustomError
 )
+
+func NewZapLoggerAdapter(z *zap.Logger) *internal.ZapLoggerAdapter {
+	return internal.NewZapLoggerAdapter(z)
+}
 
 func NewWorkflow() workflow.Workflow {
 	return &internal.TemporalWorkflow{}

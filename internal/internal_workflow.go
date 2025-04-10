@@ -22,13 +22,12 @@ type Workflow interface {
 	WithWorkflowDomain(ctx Context, name string) Context
 	WithWorkflowTaskList(ctx Context, name string) Context
 	ExecuteChildWorkflow(ctx Context, childWorkflow interface{}, args ...interface{}) ChildWorkflowFuture
-	NewCustomError(reason string, details ...interface{}) error
+	NewCustomError(reason string, details ...interface{}) CustomError
 	NewFuture(ctx Context) (Future, Settable)
 	Go(ctx Context, f func(ctx Context))
 	SideEffect(ctx Context, f func(ctx Context) interface{}) encoded.Value
 	Now(ctx Context) time.Time
 	Sleep(ctx Context, d time.Duration) (err error)
 	IsCanceledError(ctx Context, err error) bool
-	CustomError(ctx Context, err error) (bool, string, string)
 	WithRetryPolicy(ctx Context, retryPolicy RetryPolicy) Context
 }

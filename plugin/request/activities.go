@@ -37,7 +37,7 @@ type JSONRequest struct {
 	Assert  Assert              `json:"assert,omitempty"`
 }
 
-func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, error) {
+func (r *activities) DoJSON(ctx context.Context, request JSONRequest) (any, workflow.CustomError) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("activity-start", zap.Any("request", request))
 
@@ -145,7 +145,7 @@ func (r *activities) Do(
 	url string,
 	headers map[string][]string,
 	body []byte,
-) ([]byte, error) {
+) ([]byte, workflow.CustomError) {
 	logger := activity.GetLogger(ctx)
 	logger.Info(
 		"activity-start",
@@ -161,7 +161,7 @@ func (r *activities) Do(
 	}
 }
 
-func do(ctx context.Context, client *http.Client, req *http.Request) ([]byte, error) {
+func do(ctx context.Context, client *http.Client, req *http.Request) ([]byte, workflow.CustomError) {
 	logger := activity.GetLogger(ctx)
 	res, err := client.Do(req)
 	if err != nil {

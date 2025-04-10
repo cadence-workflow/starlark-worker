@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/cadence-workflow/starlark-worker/encoded"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/star"
@@ -29,21 +28,6 @@ import (
 )
 
 type CadenceWorkflow struct{}
-
-func (w CadenceWorkflow) CustomError(ctx Context, err error) (bool, string, string) {
-	var cadenceErr *cadence.CustomError
-	if errors.As(err, &cadenceErr) {
-		if cadenceErr.HasDetails() {
-			var d string
-			if err := cadenceErr.Details(&d); err != nil {
-				d = fmt.Sprintf("internal: error details extraction failure: %s", err.Error())
-			}
-			return true, cadenceErr.Reason(), d
-		}
-		return true, cadenceErr.Reason(), cadenceErr.Error()
-	}
-	return false, "", ""
-}
 
 func (w CadenceWorkflow) IsCanceledError(ctx Context, err error) bool {
 	var canceledError *cadence.CanceledError
@@ -268,7 +252,7 @@ func (w CadenceWorkflow) ExecuteChildWorkflow(ctx Context, childWorkflow interfa
 	return &cadenceChildWorkflowFuture{cf: f}
 }
 
-func (w CadenceWorkflow) NewCustomError(reason string, details ...interface{}) error {
+func (w CadenceWorkflow) NewCustomError(reason string, details ...interface{}) CustomError {
 	return cadence.NewCustomError(reason, details...)
 }
 

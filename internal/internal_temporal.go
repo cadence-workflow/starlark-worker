@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/cadence-workflow/starlark-worker/encoded"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/star"
@@ -39,22 +38,6 @@ func (w TemporalWorkflow) WithRetryPolicy(ctx Context, retryPolicy RetryPolicy) 
 		NonRetryableErrorTypes: retryPolicy.NonRetriableErrorReasons,
 	}
 	return temp.WithRetryPolicy(ctx.(temp.Context), tempRetryPolicy)
-}
-
-func (w TemporalWorkflow) CustomError(ctx Context, err error) (bool, string, string) {
-	var applicationError *temporal.ApplicationError
-	isCustomErr := errors.As(err, &applicationError)
-	if isCustomErr {
-		if applicationError.HasDetails() {
-			var d string
-			if err := applicationError.Details(&d); err != nil {
-				d = fmt.Sprintf("internal: error details extraction failure: %s", err.Error())
-			}
-			return isCustomErr, applicationError.Message(), d
-		}
-		return isCustomErr, applicationError.Message(), applicationError.Error()
-	}
-	return isCustomErr, "", ""
 }
 
 func (w TemporalWorkflow) IsCanceledError(ctx Context, err error) bool {
@@ -281,8 +264,11 @@ func (w TemporalWorkflow) WithWorkflowTaskList(ctx Context, name string) Context
 	return temp.WithTaskQueue(ctx.(temp.Context), name)
 }
 
-func (w TemporalWorkflow) NewCustomError(reason string, details ...interface{}) error {
-	return temporal.NewApplicationError(reason, "CustomError", details...)
+func (w TemporalWorkflow) NewCustomError(reason string, details ...interface{}) CustomError {
+	err := temporal.NewApplicationError(reason, reason, details...)
+	return &TemporalCustomError{
+		ApplicationError: *err.(*temporal.ApplicationError),
+	}
 }
 
 func (w TemporalWorkflow) NewFuture(ctx Context) (Future, Settable) {
@@ -314,7 +300,6 @@ type ZapLoggerAdapter struct {
 	zapLogger *zap.Logger
 }
 
-// NewZapLoggerAdapter returns both a Temporal-compatible logger and keeps zap.Logger
 func NewZapLoggerAdapter(z *zap.Logger) *ZapLoggerAdapter {
 	return &ZapLoggerAdapter{zapLogger: z}
 }
@@ -467,4 +452,46 @@ func (s TemporalDataConverter) FromPayload(payload *commonpb.Payload, to interfa
 		return err
 	}
 	return nil
+}
+
+type TemporalCustomError struct {
+	temporal.ApplicationError
+}
+
+func (e TemporalCustomError) Error() string {
+	return e.ApplicationError.Error()
+}
+
+// Reason gets the reason of this custom error
+func (e TemporalCustomError) Reason() string {
+	return e.ApplicationError.Error()
+}
+
+// HasDetails return if this error has strong typed detail data.
+func (e TemporalCustomError) HasDetails() bool {
+	return e.ApplicationError.HasDetails()
+}
+
+// Details extracts strong typed detail data of this custom error. If there is no details, it will return ErrNoData.
+func (e TemporalCustomError) Details(d ...interface{}) error {
+	return e.ApplicationError.Details(d...)
+}
+
+type TemporalCanceledError struct {
+	temporal.CanceledError
+}
+
+// Error from error interface
+func (e TemporalCanceledError) Error() string {
+	return e.Error()
+}
+
+// HasDetails return if this error has strong typed detail data.
+func (e TemporalCanceledError) HasDetails() bool {
+	return e.HasDetails()
+}
+
+// Details extracts strong typed detail data of this error.
+func (e TemporalCanceledError) Details(d ...interface{}) error {
+	return e.Details(d...)
 }
