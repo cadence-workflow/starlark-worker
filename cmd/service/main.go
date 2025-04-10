@@ -88,11 +88,11 @@ func main() {
 	var newWorker worker.Worker
 	var backend service.BackendType
 	if opt.Backend == "cadence" || opt.Backend == "" {
-		newWorker = cadence.NewWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
+		newWorker = cadence.NewCadenceWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
 		backend = service.CadenceBackend
 	} else if opt.Backend == "temporal" {
 		backend = service.TemporalBackend
-		newWorker = temporal.NewWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList)
+		newWorker = temporal.NewTemporalWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList)
 	}
 	workerService, err := service.NewService(plugin.Registry, opt.ClientTaskList, backend)
 	if err != nil {

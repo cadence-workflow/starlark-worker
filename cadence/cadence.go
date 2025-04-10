@@ -31,10 +31,10 @@ func UpdateWorkflowFunctionContextArgument(w interface{}) interface{} {
 	return internal.UpdateWorkflowFunctionContextArgument(w, reflect.TypeOf((*cad.Context)(nil)).Elem())
 }
 
-func NewWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
+func NewCadenceWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
 	cadInterface := NewInterface(url)
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, "backendContextKey", NewWorkflow())
+	ctx = context.WithValue(ctx, workflow.BackendContextKey, NewWorkflow())
 	w := cadworker.New(
 		cadInterface,
 		domain,
@@ -51,6 +51,10 @@ func NewWorker(url string, domain string, taskList string, logger *zap.Logger) w
 			BackgroundActivityContext: ctx,
 		},
 	)
+	return NewWorker(w)
+}
+
+func NewWorker(w cadworker.Worker) worker.Worker {
 	return &internal.CadenceWorker{Worker: w}
 }
 

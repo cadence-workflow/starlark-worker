@@ -29,7 +29,7 @@ func NewWorkflow() workflow.Workflow {
 	return &internal.TemporalWorkflow{}
 }
 
-func NewWorker(url string, namespace string, taskQueue string) worker.Worker {
+func NewTemporalWorker(url string, namespace string, taskQueue string) worker.Worker {
 	newClient, err := NewClient(url, namespace)
 	if err != nil {
 		panic("failed to create temporal client")
@@ -44,6 +44,10 @@ func NewWorker(url string, namespace string, taskQueue string) worker.Worker {
 			BackgroundActivityContext: ctx,
 		},
 	)
+	return NewWorker(w)
+}
+
+func NewWorker(w tempworker.Worker) worker.Worker {
 	return &internal.TemporalWorker{Worker: w}
 }
 
