@@ -45,6 +45,14 @@ type ChildWorkflowOptions struct {
 
 	// WorkflowIDReusePolicy - Whether server allow reuse of workflow ID, can be useful
 	// for dedup logic if set to WorkflowIdReusePolicyRejectDuplicate
+	// Here the value we use Cadence constant, and we map to Temporal equivalent based on the table below.
+	//               Cadence Constant	             Value	Meaning	Temporal Equivalent	Value
+	//----------------------------------------------------------------------------------------------------
+	//WorkflowIDReusePolicyAllowDuplicateFailedOnly	   0	Allow reuse if last run was terminated/cancelled/timeouted/failed	WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY	2
+	//WorkflowIDReusePolicyAllowDuplicate	           1	Allow reuse as long as workflow is not running	WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE	1
+	//WorkflowIDReusePolicyRejectDuplicate	           2	Never allow reuse	WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE	3
+	//WorkflowIDReusePolicyTerminateIfRunning	       3	Terminate if running, then start new	WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
+	//----------------------------------------------------------------------------------------------------
 	WorkflowIDReusePolicy int
 
 	// RetryPolicy specify how to retry child workflow if error happens.

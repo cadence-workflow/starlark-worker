@@ -25,10 +25,13 @@ import (
 	"time"
 )
 
+// Workflow checks that TemporalWorkflow implements the Workflow interface.
 var _ Workflow = (*TemporalWorkflow)(nil)
 
+// TemporalWorkflow is a wrapper around the Temporal SDK workflow interface.
 type TemporalWorkflow struct{}
 
+// WithRetryPolicy sets the retry policy for the workflow execution.
 func (w TemporalWorkflow) WithRetryPolicy(ctx Context, retryPolicy RetryPolicy) Context {
 	tempRetryPolicy := temporal.RetryPolicy{
 		InitialInterval:        retryPolicy.InitialInterval,
@@ -40,60 +43,76 @@ func (w TemporalWorkflow) WithRetryPolicy(ctx Context, retryPolicy RetryPolicy) 
 	return temp.WithRetryPolicy(ctx.(temp.Context), tempRetryPolicy)
 }
 
+// IsCanceledError checks if the error is a CanceledError.
 func (w TemporalWorkflow) IsCanceledError(ctx Context, err error) bool {
 	var canceledError *temporal.CanceledError
 	return errors.As(err, &canceledError)
 }
 
+// temporalWorkflowInfo is a wrapper around the Temporal SDK workflow context.
 type tempWorkflowInfo struct {
 	context temp.Context
 }
 
+// temporalFuture is a wrapper around the Temporal SDK future interface.
 type temporalFuture struct {
 	f temp.Future
 }
 
+// temporalChildWorkflowFuture is a wrapper around the Temporal SDK child workflow future interface.
 type temporalChildWorkflowFuture struct {
 	cf temp.ChildWorkflowFuture
 }
 
+// temporalSettable is a wrapper around the Temporal SDK settable interface.
 type temporalSettable struct {
 	s temp.Settable
 }
 
+// TemporalWorker is a wrapper around the Temporal SDK worker interface.
 type TemporalWorker struct {
 	Worker tmpworker.Worker
 }
 
+// Get returns the result of the future.
 func (f *temporalFuture) Get(ctx Context, valPtr interface{}) error {
 	return f.f.Get(ctx.(temp.Context), valPtr)
 }
+
+// IsReady checks if the future is ready.
 func (f *temporalFuture) IsReady() bool {
 	return f.f.IsReady()
 }
 
+// RegisterWorkflow registers a workflow with the Temporal worker.
 func (tw *TemporalWorker) RegisterWorkflow(wf interface{}) {
 	wrappedWf, funcName := UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*temp.Context)(nil)).Elem())
 	tw.Worker.RegisterWorkflowWithOptions(wrappedWf, temp.RegisterOptions{
 		Name: funcName,
 	})
 }
+
+// RegisterActivity registers an activity with the Temporal worker.
 func (tw *TemporalWorker) RegisterActivity(a interface{}) {
 	tw.Worker.RegisterActivity(a)
 }
 
+// Start starts the Temporal worker.
 func (tw *TemporalWorker) Start() error {
 	return tw.Worker.Start()
 }
 
+// Stop stops the Temporal worker.
 func (tw *TemporalWorker) Stop() {
 	tw.Worker.Stop()
 }
 
+// Run runs the Temporal worker and blocks until it is interrupted.
 func (tw *TemporalWorker) Run(interruptCh <-chan interface{}) error {
 	return tw.Worker.Run(interruptCh)
 }
 
+// RegisterWorkflowWithOptions registers a workflow with the Temporal worker using options.
 func (tw *TemporalWorker) RegisterWorkflowWithOptions(w interface{}, options RegisterWorkflowOptions) {
 	tw.Worker.RegisterWorkflowWithOptions(w, temp.RegisterOptions{
 		Name: options.Name,
@@ -106,6 +125,7 @@ func (tw *TemporalWorker) RegisterWorkflowWithOptions(w interface{}, options Reg
 	})
 }
 
+// RegisterActivityWithOptions registers an activity with the Temporal worker using options.
 func (tw *TemporalWorker) RegisterActivityWithOptions(w interface{}, options RegisterActivityOptions) {
 	tw.Worker.RegisterActivityWithOptions(w, tempactivity.RegisterOptions{
 		Name:                          options.Name,
@@ -230,26 +250,61 @@ func (w *TemporalWorkflow) WithActivityOptions(ctx Context, options ActivityOpti
 	return temp.WithActivityOptions(ctx.(temp.Context), cadOptions)
 }
 
+// WithChildOptions sets the child workflow options for the workflow execution.
 func (w TemporalWorkflow) WithChildOptions(ctx Context, cwo ChildWorkflowOptions) Context {
+	var retryPolicy *temporal.RetryPolicy
+	if cwo.RetryPolicy != nil {
+		retryPolicy = &temporal.RetryPolicy{
+			InitialInterval:        cwo.RetryPolicy.InitialInterval,
+			BackoffCoefficient:     cwo.RetryPolicy.BackoffCoefficient,
+			MaximumInterval:        cwo.RetryPolicy.MaximumInterval,
+			MaximumAttempts:        cwo.RetryPolicy.MaximumAttempts,
+			NonRetryableErrorTypes: cwo.RetryPolicy.NonRetriableErrorReasons,
+		}
+	}
+	// Construct temporal.SearchAttributes
+	if cwo.SearchAttributes != nil {
+		for k, v := range cwo.SearchAttributes {
+			typed := temporal.NewSearchAttributeKeyString(k)
+			updates := typed.ValueSet(v.(string))
+			// TODO: Check if this is the correct way to set search attributes
+			_ = temp.UpsertTypedSearchAttributes(ctx.(temp.Context), updates)
+		}
+	}
 	opt := temp.ChildWorkflowOptions{
 		Namespace:                cwo.Domain,
 		WorkflowID:               cwo.WorkflowID,
 		TaskQueue:                cwo.TaskList,
 		WorkflowExecutionTimeout: cwo.ExecutionStartToCloseTimeout,
-		//WorkflowRunTimeout:       cwo.,
-		WorkflowTaskTimeout: cwo.TaskStartToCloseTimeout,
-		WaitForCancellation: cwo.WaitForCancellation,
-		//RetryPolicy:              cwo.RetryPolicy,
-		CronSchedule: cwo.CronSchedule,
-		Memo:         cwo.Memo,
-		//TypedSearchAttributes:    cwo.SearchAttributes,
-		ParentClosePolicy: 0,
-		VersioningIntent:  0,
+		WorkflowTaskTimeout:      cwo.TaskStartToCloseTimeout,
+		WaitForCancellation:      cwo.WaitForCancellation,
+		RetryPolicy:              retryPolicy,
+		CronSchedule:             cwo.CronSchedule,
+		Memo:                     cwo.Memo,
+		TypedSearchAttributes:    temp.GetTypedSearchAttributes(ctx.(temp.Context)),
+		ParentClosePolicy:        enumspb.PARENT_CLOSE_POLICY_UNSPECIFIED,
+		VersioningIntent:         0,
 	}
+
 	if _, ok := enumspb.WorkflowIdReusePolicy_name[int32(cwo.WorkflowIDReusePolicy)]; ok {
-		opt.WorkflowIDReusePolicy = enumspb.WorkflowIdReusePolicy(int32(cwo.WorkflowIDReusePolicy))
+		opt.WorkflowIDReusePolicy = convertCadenceToTemporalReusePolicy(cwo.WorkflowIDReusePolicy)
 	}
 	return temp.WithChildOptions(ctx.(temp.Context), opt)
+}
+
+func convertCadenceToTemporalReusePolicy(cadenceVal int) enumspb.WorkflowIdReusePolicy {
+	switch cadenceVal {
+	case 0:
+		return enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE_FAILED_ONLY
+	case 1:
+		return enumspb.WORKFLOW_ID_REUSE_POLICY_ALLOW_DUPLICATE
+	case 2:
+		return enumspb.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE
+	case 3:
+		return enumspb.WORKFLOW_ID_REUSE_POLICY_TERMINATE_IF_RUNNING
+	default:
+		return enumspb.WORKFLOW_ID_REUSE_POLICY_UNSPECIFIED
+	}
 }
 
 func (w TemporalWorkflow) SetQueryHandler(ctx Context, queryType string, handler interface{}) error {

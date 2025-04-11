@@ -87,12 +87,15 @@ func main() {
 
 	var newWorker worker.Worker
 	var backend service.BackendType
+	var deferFunc func()
 	if opt.Backend == "cadence" || opt.Backend == "" {
 		newWorker = cadence.NewCadenceWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList, logger)
 		backend = service.CadenceBackend
 	} else if opt.Backend == "temporal" {
 		backend = service.TemporalBackend
 		newWorker = temporal.NewTemporalWorker(opt.CadenceURL, opt.CadenceDomain, opt.CadenceTaskList)
+	} else {
+		logger.Fatal("not supported backend", zap.String("backend", opt.Backend))
 	}
 	workerService, err := service.NewService(plugin.Registry, opt.ClientTaskList, backend)
 	if err != nil {
@@ -110,5 +113,6 @@ func main() {
 
 	<-sig
 	newWorker.Stop()
+	deferFunc()
 	logger.Info("EXIT.")
 }

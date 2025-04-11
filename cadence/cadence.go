@@ -32,7 +32,7 @@ func UpdateWorkflowFunctionContextArgument(w interface{}) (interface{}, string) 
 }
 
 func NewCadenceWorker(url string, domain string, taskList string, logger *zap.Logger) worker.Worker {
-	cadInterface := NewInterface(url)
+	cadInterface := NewWorkflowServiceClient(url)
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, workflow.BackendContextKey, NewWorkflow())
 	w := cadworker.New(
@@ -58,7 +58,7 @@ func NewWorker(w cadworker.Worker) worker.Worker {
 	return &internal.CadenceWorker{Worker: w}
 }
 
-func NewInterface(location string) workflowserviceclient.Interface {
+func NewWorkflowServiceClient(location string) workflowserviceclient.Interface {
 	loc, err := url.Parse(location)
 	if err != nil {
 		log.Fatalln(err)

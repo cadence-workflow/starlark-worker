@@ -1,5 +1,7 @@
 package internal
 
+// Package internal provides the interface for the Cadence worker and workflow
+// IChannel is an interface that defines the methods for sending and receiving
 type IChannel interface {
 	Receive(ctx Context, valuePtr interface{}) (ok bool)
 
