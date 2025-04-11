@@ -27,7 +27,7 @@ func NewWorkflow() workflow.Workflow {
 	return &internal.CadenceWorkflow{}
 }
 
-func UpdateWorkflowFunctionContextArgument(w interface{}) interface{} {
+func UpdateWorkflowFunctionContextArgument(w interface{}) (interface{}, string) {
 	return internal.UpdateWorkflowFunctionContextArgument(w, reflect.TypeOf((*cad.Context)(nil)).Elem())
 }
 

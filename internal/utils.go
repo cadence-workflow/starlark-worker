@@ -1,6 +1,11 @@
 package internal
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+	"runtime"
+	"strings"
+)
 
 func GetRemainingInTypes(fnType reflect.Type) []reflect.Type {
 	var types []reflect.Type
@@ -18,13 +23,16 @@ func GetOutTypes(fnType reflect.Type) []reflect.Type {
 	return types
 }
 
-func UpdateWorkflowFunctionContextArgument(wf interface{}, contextType reflect.Type) interface{} {
+func UpdateWorkflowFunctionContextArgument(wf interface{}, contextType reflect.Type) (interface{}, string) {
 	originalFunc := reflect.ValueOf(wf)
 	originalType := originalFunc.Type()
 
 	if originalType.Kind() != reflect.Func || originalType.NumIn() == 0 {
 		panic("workflow function must be a function and have at least one argument (context)")
 	}
+
+	// Get original function name (if available)
+	funcName := runtime.FuncForPC(originalFunc.Pointer()).Name()
 
 	// Build a new function with the same signature but the provided context type
 	wrappedFuncType := reflect.FuncOf(
@@ -41,6 +49,8 @@ func UpdateWorkflowFunctionContextArgument(wf interface{}, contextType reflect.T
 		}
 		return originalFunc.Call(newArgs)
 	})
+	funcName = strings.TrimSuffix(funcName, "-fm")
+	fmt.Printf("Registering workflow: %s", funcName)
 
-	return wrappedFunc.Interface()
+	return wrappedFunc.Interface(), funcName
 }

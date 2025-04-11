@@ -73,7 +73,10 @@ func (f *temporalFuture) IsReady() bool {
 }
 
 func (tw *TemporalWorker) RegisterWorkflow(wf interface{}) {
-	tw.Worker.RegisterWorkflow(UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*temp.Context)(nil)).Elem()))
+	wrappedWf, funcName := UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*temp.Context)(nil)).Elem())
+	tw.Worker.RegisterWorkflowWithOptions(wrappedWf, temp.RegisterOptions{
+		Name: funcName,
+	})
 }
 func (tw *TemporalWorker) RegisterActivity(a interface{}) {
 	tw.Worker.RegisterActivity(a)

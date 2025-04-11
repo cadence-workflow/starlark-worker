@@ -51,7 +51,7 @@ func NewWorker(w tempworker.Worker) worker.Worker {
 	return &internal.TemporalWorker{Worker: w}
 }
 
-func UpdateWorkflowFunctionContextArgument(w interface{}) interface{} {
+func UpdateWorkflowFunctionContextArgument(w interface{}) (interface{}, string) {
 	return internal.UpdateWorkflowFunctionContextArgument(w, reflect.TypeOf((*temp.Context)(nil)).Elem())
 }
 
