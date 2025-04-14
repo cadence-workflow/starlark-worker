@@ -1,9 +1,9 @@
 package time
 
 import (
-	"github.com/cadence-workflow/starlark-worker/cadstar"
+	"github.com/cadence-workflow/starlark-worker/service"
+	"github.com/cadence-workflow/starlark-worker/worker"
 	"go.starlark.net/starlark"
-	"go.uber.org/cadence/worker"
 )
 
 const pluginID = "time"
@@ -12,13 +12,13 @@ var Plugin = &plugin{}
 
 type plugin struct{}
 
-var _ cadstar.IPlugin = (*plugin)(nil)
+var _ service.IPlugin = (*plugin)(nil)
 
 func (r *plugin) ID() string {
 	return pluginID
 }
 
-func (r *plugin) Create(_ cadstar.RunInfo) starlark.Value {
+func (r *plugin) Create(_ service.RunInfo) starlark.Value {
 	return &Module{}
 }
 
