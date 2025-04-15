@@ -249,8 +249,8 @@ func (r starCadTestActivitySuite) RegisterActivity(a interface{}) {
 	r.env.RegisterActivity(a)
 }
 
-func (r starCadTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (types.EncodedValue, error) {
-	return r.env.ExecuteActivity(a, opts)
+func (r starCadTestActivitySuite) ExecuteActivity(a interface{}, opts ...interface{}) (types.EncodedValue, error) {
+	return r.env.ExecuteActivity(a, opts...)
 }
 
 type tempRegistry struct {
@@ -433,6 +433,6 @@ func (r starTempTestActivitySuite) RegisterActivity(a interface{}) {
 	r.env.RegisterActivity(a)
 }
 
-func (r starTempTestActivitySuite) ExecuteActivity(a interface{}, opts interface{}) (types.EncodedValue, error) {
-	return r.env.ExecuteActivity(a, opts)
+func (r starTempTestActivitySuite) ExecuteActivity(a interface{}, opts ...interface{}) (types.EncodedValue, error) {
+	return r.env.ExecuteActivity(a, opts...)
 }
