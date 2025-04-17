@@ -206,7 +206,7 @@ func __run__(_args []string) {
 		log.Fatal(err)
 	}
 
-	cadenceInterface := cadence.NewInterface(cadenceEndpoint)
+	cadenceInterface := cadence.NewWorkflowServiceClient(cadenceEndpoint)
 	cadenceCli := client.NewClient(cadenceInterface, domain, &client.Options{
 		MetricsScope: tally.NoopScope,
 		DataConverter: &cadence.DataConverter{

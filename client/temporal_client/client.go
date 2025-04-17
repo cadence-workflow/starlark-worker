@@ -6,6 +6,7 @@ import (
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/temporal"
 	"go.starlark.net/starlark"
 	enumspb "go.temporal.io/api/enums/v1"
 	tempclient "go.temporal.io/sdk/client"
@@ -35,10 +36,11 @@ func Run(
 	}
 
 	ctx := context.Background()
+	wf, _ := temporal.UpdateWorkflowFunctionContextArgument(WorkflowFunc)
 	workflowRun, err := temporalClient.ExecuteWorkflow(
 		ctx,
 		opt,
-		WorkflowFunc,
+		wf,
 		tar,
 		file,
 		function,

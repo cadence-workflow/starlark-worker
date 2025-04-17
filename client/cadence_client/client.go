@@ -3,6 +3,7 @@ package cadence_client
 import (
 	"context"
 	"fmt"
+	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
@@ -38,10 +39,11 @@ func Run(
 	ctx := context.Background()
 	var exec *workflow.Execution
 	var err error
+	wf, _ := cadence.UpdateWorkflowFunctionContextArgument(WorkflowFunc)
 	if exec, err = cadenceClient.StartWorkflow(
 		ctx,
 		opt,
-		WorkflowFunc,
+		wf,
 		tar,
 		file,
 		function,

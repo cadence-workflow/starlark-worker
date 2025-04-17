@@ -15,14 +15,20 @@ This section is intended for contributors. Below are the instructions for settin
    ```
    You should see the domain settings page at [http://localhost:8088/domains/default/settings](http://localhost:8088/domains/default/settings).
 
-3. **Start the Starlark Worker**:
+3. **Start the Cadence Starlark Worker**:
    ```sh
    go run ./cmd/service 
    ```
-
+   **Or start the temporal Starlark Worker**
+   ```sh
+   go run ./cmd/service --backend temporal --url localhost:7233 
+   ```
 4. **Run a test workflow**:
    ```sh
-   go run ./client_main run --file ./testdata/ping.star
+   go run ./cmd/cadence_client_main run --file ./test/testdata/ping.star
+   ```
+   ```sh
+   go run ./cmd/temporal_client_main run --file ./test/testdata/ping.star
    ```
 
    Or try another test workflow which accepts custom input:
