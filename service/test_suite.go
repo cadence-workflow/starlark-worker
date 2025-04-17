@@ -73,13 +73,11 @@ func (r cadRegistry) RegisterActivityWithOptions(a interface{}, opt worker.Regis
 		EnableAutoHeartbeat:           opt.EnableAutoHeartbeat,
 	})
 }
-func (r cadRegistry) RegisterWorkflow(w interface{}) {
-	wf, _ := cadence.UpdateWorkflowFunctionContextArgument(w)
-	r.env.RegisterWorkflow(wf)
+func (r cadRegistry) RegisterWorkflow(w interface{}, funcName string) {
+	r.env.RegisterWorkflow(cadence.UpdateWorkflowFunctionContextArgument(w))
 }
 func (r cadRegistry) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
-	wf, _ := cadence.UpdateWorkflowFunctionContextArgument(w)
-	r.env.RegisterWorkflowWithOptions(wf, cadworkflow.RegisterOptions{
+	r.env.RegisterWorkflowWithOptions(cadence.UpdateWorkflowFunctionContextArgument(w), cadworkflow.RegisterOptions{
 		Name:                          options.Name,
 		EnableShortName:               options.EnableShortName,
 		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
@@ -111,8 +109,7 @@ func (r *StarCadTestEnvironment) ExecuteFunction(
 	environ *starlark.Dict,
 ) {
 	env := r.env
-	wf, _ := cadence.UpdateWorkflowFunctionContextArgument(r.service.Run)
-	env.ExecuteWorkflow(wf, r.tar, filePath, fn, args, kw, environ)
+	env.ExecuteWorkflow(cadence.UpdateWorkflowFunctionContextArgument(r.service.Run), r.tar, filePath, fn, args, kw, environ)
 }
 
 func (r *StarCadTestEnvironment) GetResult(valuePtr any) error {
@@ -267,13 +264,11 @@ func (r tempRegistry) RegisterActivityWithOptions(a interface{}, opt worker.Regi
 		SkipInvalidStructFunctions:    opt.SkipInvalidStructFunctions,
 	})
 }
-func (r tempRegistry) RegisterWorkflow(w interface{}) {
-	wf, _ := temporal.UpdateWorkflowFunctionContextArgument(w)
-	r.env.RegisterWorkflow(wf)
+func (r tempRegistry) RegisterWorkflow(w interface{}, funcName string) {
+	r.env.RegisterWorkflow(temporal.UpdateWorkflowFunctionContextArgument(w))
 }
 func (r tempRegistry) RegisterWorkflowWithOptions(w interface{}, options worker.RegisterWorkflowOptions) {
-	wf, _ := temporal.UpdateWorkflowFunctionContextArgument(w)
-	r.env.RegisterWorkflowWithOptions(wf, tmpworkflow.RegisterOptions{
+	r.env.RegisterWorkflowWithOptions(temporal.UpdateWorkflowFunctionContextArgument(w), tmpworkflow.RegisterOptions{
 		Name:                          options.Name,
 		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,
 	})
@@ -301,8 +296,7 @@ func (r *StarTempTestEnvironment) ExecuteFunction(
 	kw []starlark.Tuple,
 	environ *starlark.Dict,
 ) {
-	wf, _ := temporal.UpdateWorkflowFunctionContextArgument(r.service.Run)
-	r.env.ExecuteWorkflow(wf, r.tar, filePath, fn, args, kw, environ)
+	r.env.ExecuteWorkflow(temporal.UpdateWorkflowFunctionContextArgument(r.service.Run), r.tar, filePath, fn, args, kw, environ)
 }
 
 func (r *StarTempTestEnvironment) GetResult(valuePtr any) error {

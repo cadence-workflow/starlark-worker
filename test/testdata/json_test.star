@@ -1,5 +1,5 @@
 load("@plugin", "json", t = "test")
-load("//test/testdata/lib/math.star", "PI")
+load("../testdata/lib/math.star", "PI")
 
 def test_json_dumps():
     t.equal('"foo"', json.dumps("foo"))

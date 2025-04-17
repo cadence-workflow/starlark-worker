@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var WorkflowFunc string = "github.com/cadence-workflow/starlark-worker/service.(*Service).Run"
+var WorkflowFunc = "starlark-worklow"
 
 func Run(
 	tar []byte,

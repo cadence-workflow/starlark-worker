@@ -2,8 +2,6 @@ module github.com/cadence-workflow/starlark-worker
 
 go 1.23.0
 
-toolchain go1.24.1
-
 require (
 	github.com/google/uuid v1.6.0
 	github.com/json-iterator/go v1.1.12

@@ -1,5 +1,5 @@
 load("@plugin", "os", "time", "uuid", "workflow")
-load("//test/testdata/lib/math.star", "PI")
+load("../testdata/lib/math.star", "PI")
 
 def main(verbose = True, **keywords):
     result = {

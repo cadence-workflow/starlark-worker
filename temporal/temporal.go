@@ -87,7 +87,7 @@ func NewWorker(w tempworker.Worker) worker.Worker {
 // to the expected Temporal format by swapping in a Temporal-specific context.
 //
 // This function supports dynamic introspection and adaptation of user-defined workflows.
-func UpdateWorkflowFunctionContextArgument(w interface{}) (interface{}, string) {
+func UpdateWorkflowFunctionContextArgument(w interface{}) interface{} {
 	return internal.UpdateWorkflowFunctionContextArgument(w, reflect.TypeOf((*temp.Context)(nil)).Elem())
 }
 
