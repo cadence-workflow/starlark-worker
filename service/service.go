@@ -21,8 +21,9 @@ import (
 type BackendType string
 
 const (
-	CadenceBackend  BackendType = "cadence"
-	TemporalBackend BackendType = "temporal"
+	ServiceWorkflowFunc             = "starlark-worklow"
+	CadenceBackend      BackendType = "cadence"
+	TemporalBackend     BackendType = "temporal"
 )
 
 var builtins = starlark.StringDict{
@@ -279,7 +280,7 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 }
 
 func (r *Service) Register(registry worker.Registry) {
-	registry.RegisterWorkflow(r.Run)
+	registry.RegisterWorkflow(r.Run, ServiceWorkflowFunc)
 	for _, plugin := range r.Plugins {
 		plugin.Register(registry)
 	}

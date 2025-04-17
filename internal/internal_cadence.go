@@ -62,11 +62,11 @@ type CadenceWorker struct {
 }
 
 // RegisterWorkflow registers a workflow with the Cadence worker.
-func (w *CadenceWorker) RegisterWorkflow(wf interface{}) {
-	wrappedWf, funcName := UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*cad.Context)(nil)).Elem())
-	w.Worker.RegisterWorkflowWithOptions(wrappedWf, cad.RegisterOptions{
-		Name: funcName,
-	})
+func (w *CadenceWorker) RegisterWorkflow(wf interface{}, funcName string) {
+	w.Worker.RegisterWorkflowWithOptions(UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*cad.Context)(nil)).Elem()),
+		cad.RegisterOptions{
+			Name: funcName,
+		})
 }
 
 // RegisterActivity registers an activity with the Cadence worker.

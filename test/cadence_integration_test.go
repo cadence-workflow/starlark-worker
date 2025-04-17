@@ -75,7 +75,7 @@ func (r *CadSuite) TestAtExit() {
 	}
 
 	// run the test
-	r.runTestFunction("testdata/atexit_test.star", "injected_error_test", func() {
+	r.runTestFunction("./testdata/atexit_test.star", "injected_error_test", func() {
 		err := r.env.GetResult(nil)
 		require := r.Require()
 		require.Error(err)

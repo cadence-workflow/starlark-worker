@@ -9,7 +9,7 @@ type (
 )
 
 type Registry interface {
-	RegisterWorkflow(w interface{})
+	RegisterWorkflow(w interface{}, name string)
 	RegisterWorkflowWithOptions(w interface{}, options RegisterWorkflowOptions)
 	RegisterActivity(a interface{})
 	RegisterActivityWithOptions(a interface{}, options RegisterActivityOptions)

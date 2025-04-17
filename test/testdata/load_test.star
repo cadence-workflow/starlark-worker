@@ -1,7 +1,7 @@
 load("@plugin", t = "test")
-load("//testdata/lib/math.star", "PI")
-load("//testdata/resources/catalog.json", catalog = "json")
-load("//testdata/resources/data.txt", data = "txt")
+load("../testdata/lib/math.star", "PI")
+load("../testdata/resources/catalog.json", catalog = "json")
+load("../testdata/resources/data.txt", data = "txt")
 
 expected_data = """The quick brown fox
 jumps over the lazy dog

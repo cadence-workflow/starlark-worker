@@ -85,9 +85,8 @@ func (f *temporalFuture) IsReady() bool {
 }
 
 // RegisterWorkflow registers a workflow with the Temporal worker.
-func (tw *TemporalWorker) RegisterWorkflow(wf interface{}) {
-	wrappedWf, funcName := UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*temp.Context)(nil)).Elem())
-	tw.Worker.RegisterWorkflowWithOptions(wrappedWf, temp.RegisterOptions{
+func (tw *TemporalWorker) RegisterWorkflow(wf interface{}, funcName string) {
+	tw.Worker.RegisterWorkflowWithOptions(UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*temp.Context)(nil)).Elem()), temp.RegisterOptions{
 		Name: funcName,
 	})
 }

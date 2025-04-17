@@ -75,7 +75,7 @@ func (r *TempSuite) TestAtExit() {
 	}
 
 	// run the test
-	r.runTestFunction("testdata/atexit_test.star", "injected_error_test", func() {
+	r.runTestFunction("./testdata/atexit_test.star", "injected_error_test", func() {
 		err := r.env.GetResult(nil)
 		require := r.Require()
 		require.Error(err)
@@ -84,11 +84,11 @@ func (r *TempSuite) TestAtExit() {
 
 		var werr *temporalsdk.WorkflowExecutionError
 		errors.As(err, &werr)
-		tempErr := werr.Unwrap().(*temporalsdk.ApplicationError)
-
-		require.True(errors.As(err, &tempErr))
-		require.Equal("assert\nExpected : 200\nActual   : 404 (type: assert\nExpected : 200\nActual   : 404, retryable: true)", tempErr.Message())
-		require.Equal("TemporalCustomError", tempErr.Type())
+		tempErr := werr.Unwrap()
+		terr := tempErr.(*temporalsdk.ApplicationError)
+		require.True(errors.As(err, &terr))
+		require.Equal("assert\nExpected : 200\nActual   : 404 (type: assert\nExpected : 200\nActual   : 404, retryable: true)", terr.Message())
+		require.Equal("TemporalCustomError", terr.Type())
 	})
 
 	// make sure the test run did not leak any resources on the test server

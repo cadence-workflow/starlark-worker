@@ -13,5 +13,5 @@ type EncodedValue interface {
 
 type StarTestActivitySuite interface {
 	RegisterActivity(a interface{})
-	ExecuteActivity(a interface{}, opts interface{}) (EncodedValue, error)
+	ExecuteActivity(a interface{}, opts ...interface{}) (EncodedValue, error)
 }
