@@ -3,9 +3,7 @@ package cadence_client
 import (
 	"context"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/cadence"
 	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
 	cadenceshared "go.uber.org/cadence/.gen/go/shared"
@@ -19,7 +17,7 @@ import (
 	"time"
 )
 
-var WorkflowFunc any = (*service.Service)(nil).Run
+var WorkflowFunc = "github.com/cadence-workflow/starlark-worker/service.(*Service).Run"
 
 func Run(
 	tar []byte,
@@ -39,11 +37,11 @@ func Run(
 	ctx := context.Background()
 	var exec *workflow.Execution
 	var err error
-	wf, _ := cadence.UpdateWorkflowFunctionContextArgument(WorkflowFunc)
+
 	if exec, err = cadenceClient.StartWorkflow(
 		ctx,
 		opt,
-		wf,
+		WorkflowFunc,
 		tar,
 		file,
 		function,
