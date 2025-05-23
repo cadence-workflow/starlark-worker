@@ -58,12 +58,6 @@ func StringDictToDict(a starlark.StringDict) *starlark.Dict {
 	return d
 }
 
-func SetStringKey(d *starlark.Dict, key string, value starlark.Value) {
-	if err := d.SetKey(starlark.String(key), value); err != nil {
-		panic(err)
-	}
-}
-
 func StringDictEqualDepth(x, y starlark.StringDict, depth int) (bool, error) {
 	if len(x) != len(y) {
 		return false, nil
