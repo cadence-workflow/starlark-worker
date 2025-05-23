@@ -9,6 +9,8 @@ import (
 
 const DataclassType = "dataclass"
 
+const codecAttr = "__codec__"
+
 var DataclassConstructor = starlark.NewBuiltin(DataclassType, MakeDataclass)
 
 type Dataclass interface {
@@ -26,12 +28,10 @@ var _ Dataclass = (*_Dataclass)(nil)
 func NewDataclass(attrs starlark.StringDict) Dataclass {
 	attrsCopy := starlark.StringDict{}
 	for k, v := range attrs {
-		if k == "__codec__" {
-			// __codec__ is reserved for the internal encoding use
-			err := fmt.Errorf("__codec__ is reserved")
-			panic(err)
-		}
 		attrsCopy[k] = v
+	}
+	if _, found := attrsCopy[codecAttr]; !found {
+		attrsCopy[codecAttr] = starlark.String(DataclassType)
 	}
 	return &_Dataclass{attrs: attrsCopy}
 }
@@ -72,8 +72,10 @@ func (r *_Dataclass) SetField(name string, val starlark.Value) error {
 }
 
 func (r *_Dataclass) MarshalJSON() ([]byte, error) {
+	if _, found := r.attrs[codecAttr]; !found {
+		return nil, fmt.Errorf("invalid state: '%s' attribute not found", codecAttr)
+	}
 	dict := StringDictToDict(r.attrs)
-	SetStringKey(dict, "__codec__", starlark.String(DataclassType))
 	return Encode(dict)
 }
 

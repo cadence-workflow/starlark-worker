@@ -5,7 +5,7 @@ def test_attributes():
         p1 = "v1",
         p2 = "v2",
     )
-    t.equal(["p1", "p2"], dir(o1))
+    t.equal(["__codec__", "p1", "p2"], dir(o1))
     t.true(hasattr(o1, "p1"))
     t.true(hasattr(o1, "p2"))
     t.false(hasattr(o1, "p3"))
@@ -52,8 +52,8 @@ def test_comparison_operators():
 
 def test_empty():
     o = dataclass()
-    t.equal([], dir(o))
-    t.false(bool(o))
+    t.equal(["__codec__"], dir(o))
+    t.true(bool(o))
 
 def test_builtin_methods():
     o1 = dataclass(
@@ -61,4 +61,4 @@ def test_builtin_methods():
         p2 = "v2",
     )
     t.equal("dataclass", type(o1))
-    t.equal('<dataclass {p1: "v1", p2: "v2"}>', str(o1))
+    t.equal('<dataclass {__codec__: "dataclass", p1: "v1", p2: "v2"}>', str(o1))

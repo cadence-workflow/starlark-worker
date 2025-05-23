@@ -10,6 +10,10 @@ import (
 	"reflect"
 )
 
+var DataclassCodecs = map[string]bool{
+	DataclassType: true,
+}
+
 var (
 	_encode = starlarkjson.Module.Members["encode"].(*starlark.Builtin)
 	_decode = starlarkjson.Module.Members["decode"].(*starlark.Builtin)
@@ -170,19 +174,8 @@ func codecDictReplacer(dict *starlark.Dict) (starlark.Value, error) {
 	if !found {
 		return dict, nil
 	}
-	if codec == starlark.String(DataclassType) {
-		// Create a shallow copy without __codec__
-		tempDict := starlark.NewDict(dict.Len() - 1)
-		for _, item := range dict.Items() {
-			if len(item) != 2 {
-				continue
-			}
-			if keyStr, ok := item[0].(starlark.String); ok && keyStr == "__codec__" {
-				continue
-			}
-			_ = tempDict.SetKey(item[0], item[1])
-		}
-		return NewDataclassFromDict(tempDict), nil
+	if c, ok := codec.(starlark.String); ok && DataclassCodecs[c.GoString()] {
+		return NewDataclassFromDict(dict), nil
 	}
 	return dict, nil
 }
