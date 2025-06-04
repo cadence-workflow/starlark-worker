@@ -286,6 +286,13 @@ func (r *Service) Register(registry worker.Registry) {
 	}
 }
 
+func (r *Service) RegisterWithOptions(registry worker.Registry, options worker.RegisterWorkflowOptions) {
+	registry.RegisterWorkflowWithOptions(r.Run, options)
+	for _, plugin := range r.Plugins {
+		plugin.Register(registry)
+	}
+}
+
 func GetExitHooks(ctx workflow.Context) *ExitHooks {
 	return getGlobals(ctx).exitHooks
 }
