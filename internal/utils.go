@@ -4,6 +4,8 @@ import (
 	"reflect"
 )
 
+// GetRemainingInTypes returns a slice of reflect.Type containing all input types
+// except the first one.
 func GetRemainingInTypes(fnType reflect.Type) []reflect.Type {
 	var types []reflect.Type
 	for i := 1; i < fnType.NumIn(); i++ {
@@ -12,6 +14,8 @@ func GetRemainingInTypes(fnType reflect.Type) []reflect.Type {
 	return types
 }
 
+// GetOutTypes returns a slice of reflect.Type containing all output types
+// of the provided function type.
 func GetOutTypes(fnType reflect.Type) []reflect.Type {
 	var types []reflect.Type
 	for i := 0; i < fnType.NumOut(); i++ {
