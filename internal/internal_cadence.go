@@ -90,8 +90,8 @@ func (w *CadenceWorker) Stop() {
 }
 
 // RegisterWorkflowWithOptions registers a workflow with the Cadence worker using options.
-func (w *CadenceWorker) RegisterWorkflowWithOptions(runFunc interface{}, options RegisterWorkflowOptions) {
-	w.Worker.RegisterWorkflowWithOptions(runFunc, cad.RegisterOptions{
+func (w *CadenceWorker) RegisterWorkflowWithOptions(wf interface{}, options RegisterWorkflowOptions) {
+	w.Worker.RegisterWorkflowWithOptions(UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*cad.Context)(nil)).Elem()), cad.RegisterOptions{
 		Name:                          options.Name,
 		EnableShortName:               options.EnableShortName,
 		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,

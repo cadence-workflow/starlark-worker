@@ -112,8 +112,8 @@ func (tw *TemporalWorker) Run(interruptCh <-chan interface{}) error {
 }
 
 // RegisterWorkflowWithOptions registers a workflow with the Temporal worker using options.
-func (tw *TemporalWorker) RegisterWorkflowWithOptions(w interface{}, options RegisterWorkflowOptions) {
-	tw.Worker.RegisterWorkflowWithOptions(w, temp.RegisterOptions{
+func (tw *TemporalWorker) RegisterWorkflowWithOptions(wf interface{}, options RegisterWorkflowOptions) {
+	tw.Worker.RegisterWorkflowWithOptions(UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*temp.Context)(nil)).Elem()), temp.RegisterOptions{
 		Name: options.Name,
 		// Optional: Provides a Versioning Behavior to workflows of this type. It is required
 		// when WorkerOptions does not specify [DeploymentOptions.DefaultVersioningBehavior],
