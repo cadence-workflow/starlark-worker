@@ -20,6 +20,12 @@ func GetOutTypes(fnType reflect.Type) []reflect.Type {
 	return types
 }
 
+// UpdateWorkflowFunctionContextArgument takes a workflow function and a new context type,
+// and returns a new function with the same signature but with the first argument
+// replaced by the provided context type. The rest of the arguments remain unchanged.
+// It is useful for adapting workflow functions to different context types.
+// The original function must have at least one argument (the context).
+// If the original function does not have a context argument, it panics.
 func UpdateWorkflowFunctionContextArgument(wf interface{}, contextType reflect.Type) interface{} {
 	originalFunc := reflect.ValueOf(wf)
 	originalType := originalFunc.Type()

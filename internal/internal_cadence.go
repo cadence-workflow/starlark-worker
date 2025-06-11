@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-// CadenceDataConverter is a Cadence encoded.DataConverter that supports Starlark types, such as starlark.String, starlark.Int and others.
+// CadenceWorkflow implements Workflow interface for Cadence.
 type CadenceWorkflow struct{}
 
 // IsCanceledError checks if the error is a CanceledError.
