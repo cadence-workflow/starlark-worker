@@ -1,11 +1,15 @@
 package internal
 
 import (
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/starlark"
 	"go.uber.org/cadence/encoded"
+	cadactivity "go.uber.org/cadence/activity"
+	cad "go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
@@ -107,3 +111,112 @@ func newCadenceTestConverter(t *testing.T) encoded.DataConverter {
 	logger := zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel))
 	return &CadenceDataConverter{Logger: logger}
 }
+
+// Mock workflow function for testing
+func testWorkflow(ctx Context, input string) (string, error) {
+	return "result", nil
+}
+
+// Mock cadence worker for testing
+type mockCadenceWorker struct {
+	registeredWorkflows []mockRegisteredWorkflow
+}
+
+type mockRegisteredWorkflow struct {
+	workflow interface{}
+	options  cad.RegisterOptions
+}
+
+func (m *mockCadenceWorker) RegisterWorkflowWithOptions(wf interface{}, options cad.RegisterOptions) {
+	m.registeredWorkflows = append(m.registeredWorkflows, mockRegisteredWorkflow{
+		workflow: wf,
+		options:  options,
+	})
+}
+
+func (m *mockCadenceWorker) RegisterWorkflow(wf interface{}) {}
+func (m *mockCadenceWorker) RegisterActivity(a interface{}) {}
+func (m *mockCadenceWorker) RegisterActivityWithOptions(runFunc interface{}, options cadactivity.RegisterOptions) {}
+func (m *mockCadenceWorker) Start() error { return nil }
+func (m *mockCadenceWorker) Run() error { return nil }
+func (m *mockCadenceWorker) Stop() {}
+
+// TestRegisterWorkflowWithOptions tests that RegisterWorkflowWithOptions properly transforms the workflow function
+func TestRegisterWorkflowWithOptions(t *testing.T) {
+	t.Run("workflow-function-transformation", func(t *testing.T) {
+		// Create a mock cadence worker
+		mockWorker := &mockCadenceWorker{}
+		
+		// Create CadenceWorker with mock
+		cadenceWorker := &CadenceWorker{Worker: mockWorker}
+		
+		// Test options
+		options := RegisterWorkflowOptions{
+			Name:                          "test-workflow",
+			EnableShortName:               true,
+			DisableAlreadyRegisteredCheck: false,
+		}
+		
+		// Register workflow with options
+		cadenceWorker.RegisterWorkflowWithOptions(testWorkflow, options)
+		
+		// Verify that the workflow was registered
+		require.Len(t, mockWorker.registeredWorkflows, 1)
+		
+		registered := mockWorker.registeredWorkflows[0]
+		
+		// Verify options were passed correctly
+		require.Equal(t, "test-workflow", registered.options.Name)
+		require.True(t, registered.options.EnableShortName)
+		require.False(t, registered.options.DisableAlreadyRegisteredCheck)
+		
+		// Verify the workflow function was transformed
+		registeredFunc := reflect.ValueOf(registered.workflow)
+		require.Equal(t, reflect.Func, registeredFunc.Kind())
+		
+		// Verify the function signature - first parameter should be cad.Context
+		funcType := registeredFunc.Type()
+		require.True(t, funcType.NumIn() >= 1)
+		require.Equal(t, reflect.TypeOf((*cad.Context)(nil)).Elem(), funcType.In(0))
+	})
+	
+	t.Run("compare-with-register-workflow", func(t *testing.T) {
+		// Test that RegisterWorkflowWithOptions behaves the same as RegisterWorkflow
+		// in terms of function transformation
+		mockWorker1 := &mockCadenceWorker{}
+		mockWorker2 := &mockCadenceWorker{}
+		
+		cadenceWorker1 := &CadenceWorker{Worker: mockWorker1}
+		cadenceWorker2 := &CadenceWorker{Worker: mockWorker2}
+		
+		// Register with RegisterWorkflow
+		cadenceWorker1.RegisterWorkflow(testWorkflow, "test-workflow")
+		
+		// Register with RegisterWorkflowWithOptions
+		options := RegisterWorkflowOptions{Name: "test-workflow"}
+		cadenceWorker2.RegisterWorkflowWithOptions(testWorkflow, options)
+		
+		// Verify both registered workflows have the same transformed function signature
+		require.Len(t, mockWorker1.registeredWorkflows, 1)
+		require.Len(t, mockWorker2.registeredWorkflows, 1)
+		
+		func1Type := reflect.ValueOf(mockWorker1.registeredWorkflows[0].workflow).Type()
+		func2Type := reflect.ValueOf(mockWorker2.registeredWorkflows[0].workflow).Type()
+		
+		// Both should have the same signature after transformation
+		require.Equal(t, func1Type, func2Type)
+		require.Equal(t, reflect.TypeOf((*cad.Context)(nil)).Elem(), func1Type.In(0))
+		require.Equal(t, reflect.TypeOf((*cad.Context)(nil)).Elem(), func2Type.In(0))
+	})
+}
+
+// Mock cadence context for testing - implements both internal.Context and cad.Context
+type mockCadenceContext struct{}
+
+// Implement internal.Context interface
+func (m *mockCadenceContext) Value(key interface{}) interface{} { return nil }
+
+// Implement cad.Context interface methods (extends context.Context)
+func (m *mockCadenceContext) Deadline() (time.Time, bool) { return time.Time{}, false }
+func (m *mockCadenceContext) Done() <-chan struct{} { return nil }
+func (m *mockCadenceContext) Err() error { return nil }

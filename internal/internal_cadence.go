@@ -27,7 +27,7 @@ import (
 	"time"
 )
 
-// CadenceDataConverter is a Cadence encoded.DataConverter that supports Starlark types, such as starlark.String, starlark.Int and others.
+// CadenceWorkflow implements Workflow interface for Cadence.
 type CadenceWorkflow struct{}
 
 // IsCanceledError checks if the error is a CanceledError.
@@ -90,8 +90,8 @@ func (w *CadenceWorker) Stop() {
 }
 
 // RegisterWorkflowWithOptions registers a workflow with the Cadence worker using options.
-func (w *CadenceWorker) RegisterWorkflowWithOptions(runFunc interface{}, options RegisterWorkflowOptions) {
-	w.Worker.RegisterWorkflowWithOptions(runFunc, cad.RegisterOptions{
+func (w *CadenceWorker) RegisterWorkflowWithOptions(wf interface{}, options RegisterWorkflowOptions) {
+	w.Worker.RegisterWorkflowWithOptions(UpdateWorkflowFunctionContextArgument(wf, reflect.TypeOf((*cad.Context)(nil)).Elem()), cad.RegisterOptions{
 		Name:                          options.Name,
 		EnableShortName:               options.EnableShortName,
 		DisableAlreadyRegisteredCheck: options.DisableAlreadyRegisteredCheck,

@@ -1,12 +1,18 @@
 package internal
 
 import (
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/starlark"
+	"go.temporal.io/sdk/activity"
+	temp "go.temporal.io/sdk/workflow"
 	"go.uber.org/cadence/encoded"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
-	"testing"
 )
 
 // TemporalTestStruct test struct.
@@ -106,3 +112,113 @@ func newTemporalTestConverter(t *testing.T) encoded.DataConverter {
 	logger := zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel))
 	return &CadenceDataConverter{Logger: logger}
 }
+
+// Mock workflow function for testing
+func testTemporalWorkflow(ctx Context, input string) (string, error) {
+	return "result", nil
+}
+
+// Mock temporal worker for testing
+type mockTemporalWorker struct {
+	registeredWorkflows []mockTemporalRegisteredWorkflow
+}
+
+type mockTemporalRegisteredWorkflow struct {
+	workflow interface{}
+	options  temp.RegisterOptions
+}
+
+func (m *mockTemporalWorker) RegisterWorkflowWithOptions(wf interface{}, options temp.RegisterOptions) {
+	m.registeredWorkflows = append(m.registeredWorkflows, mockTemporalRegisteredWorkflow{
+		workflow: wf,
+		options:  options,
+	})
+}
+
+func (m *mockTemporalWorker) RegisterWorkflow(wf interface{}) {}
+func (m *mockTemporalWorker) RegisterActivity(a interface{}) {}
+func (m *mockTemporalWorker) RegisterActivityWithOptions(runFunc interface{}, options activity.RegisterOptions) {}
+func (m *mockTemporalWorker) RegisterNexusService(service *nexus.Service) {}
+func (m *mockTemporalWorker) Start() error { return nil }
+func (m *mockTemporalWorker) Run(interruptCh <-chan interface{}) error { return nil }
+func (m *mockTemporalWorker) Stop() {}
+
+// TestTemporalRegisterWorkflowWithOptions tests that RegisterWorkflowWithOptions properly transforms the workflow function
+func TestTemporalRegisterWorkflowWithOptions(t *testing.T) {
+	t.Run("workflow-function-transformation", func(t *testing.T) {
+		// Create a mock temporal worker
+		mockWorker := &mockTemporalWorker{}
+		
+		// Create TemporalWorker with mock
+		temporalWorker := &TemporalWorker{Worker: mockWorker}
+		
+		// Test options
+		options := RegisterWorkflowOptions{
+			Name:                          "test-workflow",
+			VersioningBehavior:            1,
+			DisableAlreadyRegisteredCheck: false,
+		}
+		
+		// Register workflow with options
+		temporalWorker.RegisterWorkflowWithOptions(testTemporalWorkflow, options)
+		
+		// Verify that the workflow was registered
+		require.Len(t, mockWorker.registeredWorkflows, 1)
+		
+		registered := mockWorker.registeredWorkflows[0]
+		
+		// Verify options were passed correctly
+		require.Equal(t, "test-workflow", registered.options.Name)
+		require.Equal(t, temp.VersioningBehavior(1), registered.options.VersioningBehavior)
+		require.False(t, registered.options.DisableAlreadyRegisteredCheck)
+		
+		// Verify the workflow function was transformed
+		registeredFunc := reflect.ValueOf(registered.workflow)
+		require.Equal(t, reflect.Func, registeredFunc.Kind())
+		
+		// Verify the function signature - first parameter should be temp.Context
+		funcType := registeredFunc.Type()
+		require.True(t, funcType.NumIn() >= 1)
+		require.Equal(t, reflect.TypeOf((*temp.Context)(nil)).Elem(), funcType.In(0))
+	})
+	
+	t.Run("compare-with-register-workflow", func(t *testing.T) {
+		// Test that RegisterWorkflowWithOptions behaves the same as RegisterWorkflow
+		// in terms of function transformation
+		mockWorker1 := &mockTemporalWorker{}
+		mockWorker2 := &mockTemporalWorker{}
+		
+		temporalWorker1 := &TemporalWorker{Worker: mockWorker1}
+		temporalWorker2 := &TemporalWorker{Worker: mockWorker2}
+		
+		// Register with RegisterWorkflow
+		temporalWorker1.RegisterWorkflow(testTemporalWorkflow, "test-workflow")
+		
+		// Register with RegisterWorkflowWithOptions
+		options := RegisterWorkflowOptions{Name: "test-workflow"}
+		temporalWorker2.RegisterWorkflowWithOptions(testTemporalWorkflow, options)
+		
+		// Verify both registered workflows have the same transformed function signature
+		require.Len(t, mockWorker1.registeredWorkflows, 1)
+		require.Len(t, mockWorker2.registeredWorkflows, 1)
+		
+		func1Type := reflect.ValueOf(mockWorker1.registeredWorkflows[0].workflow).Type()
+		func2Type := reflect.ValueOf(mockWorker2.registeredWorkflows[0].workflow).Type()
+		
+		// Both should have the same signature after transformation
+		require.Equal(t, func1Type, func2Type)
+		require.Equal(t, reflect.TypeOf((*temp.Context)(nil)).Elem(), func1Type.In(0))
+		require.Equal(t, reflect.TypeOf((*temp.Context)(nil)).Elem(), func2Type.In(0))
+	})
+}
+
+// Mock temporal context for testing - implements both internal.Context and temp.Context
+type mockTemporalContext struct{}
+
+// Implement internal.Context interface
+func (m *mockTemporalContext) Value(key interface{}) interface{} { return nil }
+
+// Implement temp.Context interface methods (extends context.Context)
+func (m *mockTemporalContext) Deadline() (time.Time, bool) { return time.Time{}, false }
+func (m *mockTemporalContext) Done() <-chan struct{} { return nil }
+func (m *mockTemporalContext) Err() error { return nil }
