@@ -18,8 +18,8 @@ func (r *plugin) ID() string {
 	return pluginID
 }
 
-func (r *plugin) Create(_ service.RunInfo) starlark.Value {
-	return &Module{}
+func (r *plugin) Create(info service.RunInfo) starlark.Value {
+	return NewModule(info)
 }
 
 func (r *plugin) Register(registry worker.Registry) {}

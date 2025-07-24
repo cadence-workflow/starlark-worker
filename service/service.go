@@ -175,6 +175,7 @@ func (r *Service) Run(
 	runInfo := RunInfo{
 		Info:    workflow.GetInfo(ctx),
 		Environ: environ,
+		SysTime: workflow.Now(ctx),
 	}
 
 	plugins := starlark.StringDict{}

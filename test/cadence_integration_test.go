@@ -23,6 +23,7 @@ type CadSuite struct {
 	httpHandler ext.HTTPTestHandler
 	server      *httptest.Server
 	env         *service.StarCadTestEnvironment
+	environ     map[string]string
 }
 
 func TestCad(t *testing.T) { suite.Run(t, new(CadSuite)) }
@@ -63,7 +64,7 @@ func (r *CadSuite) TestAll() {
 	require.True(len(testFiles) > 0, "no test files found")
 
 	for _, file := range testFiles {
-		r.runTestFile(file)
+		r.runTestFile(file, nil)
 	}
 }
 
@@ -75,7 +76,7 @@ func (r *CadSuite) TestAtExit() {
 	}
 
 	// run the test
-	r.runTestFunction("./testdata/atexit_test.star", "injected_error_test", func() {
+	r.runTestFunction("./testdata/atexit_test.star", "injected_error_test", nil, func() {
 		err := r.env.GetResult(nil)
 		require := r.Require()
 		require.Error(err)
@@ -94,7 +95,20 @@ func (r *CadSuite) TestAtExit() {
 	r.Require().Equal(0, len(resources), "Test server contains leaked resources:\n%v", resources)
 }
 
-func (r *CadSuite) runTestFile(filePath string) {
+func (r *CadSuite) TestEffectiveTime() {
+
+	noError := func() {
+		err := r.env.GetResult(nil)
+		r.Require().NoError(err)
+	}
+
+	environ := map[string]string{
+		"STARLARK_TIME": "unix:1753361232",
+	}
+	r.runTestFunction("./testdata/time_test.star", "effective_time_test", environ, noError)
+}
+
+func (r *CadSuite) runTestFile(filePath string, environ map[string]string) {
 
 	testFunctions, err := r.env.GetTestFunctions(filePath)
 	require := r.Require()
@@ -102,7 +116,7 @@ func (r *CadSuite) runTestFile(filePath string) {
 	require.True(len(testFunctions) > 0, "no test functions found in %s", filePath)
 
 	for _, fn := range testFunctions {
-		r.runTestFunction(filePath, fn, func() {
+		r.runTestFunction(filePath, fn, environ, func() {
 			var res any
 			if err := r.env.GetResult(&res); err != nil {
 				details := err.Error()
@@ -118,18 +132,24 @@ func (r *CadSuite) runTestFile(filePath string) {
 	}
 }
 
-func (r *CadSuite) runTestFunction(filePath string, fn string, assert func()) {
+func (r *CadSuite) runTestFunction(filePath string, fn string, environ map[string]string, assert func()) {
 
 	r.Run(fmt.Sprintf("%s//%s", filePath, fn), func() {
 
 		r.SetupTest()
 		defer r.TearDownTest()
 
-		environ := starlark.NewDict(1)
-		r.Require().NoError(environ.SetKey(starlark.String("TEST_SERVER_URL"), starlark.String(r.server.URL)))
-		log.Printf("[t] environ: %s", environ.String())
-
-		r.env.ExecuteFunction(filePath, fn, nil, nil, environ)
+		defaultEnviron := map[string]string{
+			"TEST_SERVER_URL": r.server.URL,
+		}
+		environDict := starlark.NewDict(len(defaultEnviron) + len(environ))
+		for _, e := range []map[string]string{defaultEnviron, environ} {
+			for k, v := range e {
+				log.Printf("[t] environ: %s=%s", k, v)
+				r.Require().NoError(environDict.SetKey(starlark.String(k), starlark.String(v)))
+			}
+		}
+		r.env.ExecuteFunction(filePath, fn, nil, nil, environDict)
 		assert()
 	})
 }
