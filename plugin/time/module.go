@@ -8,31 +8,40 @@ import (
 
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/service"
-	"github.com/cadence-workflow/starlark-worker/star"
 	"go.starlark.net/starlark"
 	"go.uber.org/zap"
 )
 
-type Module struct{}
+type Module struct {
+	attributes map[string]starlark.Value
+	// delta is the duration applied to the current system time to resolve and return the effective time to the caller.
+	//
+	// See getEffectiveTime.
+	delta time.Duration
+}
+
+func NewModule(info service.RunInfo) starlark.Value {
+	m := &Module{}
+	m.attributes = map[string]starlark.Value{
+		"sleep":              starlark.NewBuiltin("sleep", m._sleep).BindReceiver(m),
+		"time_ns":            starlark.NewBuiltin("time_ns", m._time_ns).BindReceiver(m),
+		"time":               starlark.NewBuiltin("time", m._time).BindReceiver(m),
+		"utc_format_seconds": starlark.NewBuiltin("utc_format_seconds", m._utc_format_seconds).BindReceiver(m),
+	}
+	effectiveTime := ext.Must(info.GetEffectiveTime())
+	m.delta = effectiveTime.Sub(info.SysTime)
+	return m
+}
 
 var _ starlark.HasAttrs = &Module{}
 
-func (f *Module) String() string                        { return pluginID }
-func (f *Module) Type() string                          { return pluginID }
-func (f *Module) Freeze()                               {}
-func (f *Module) Truth() starlark.Bool                  { return true }
-func (f *Module) Hash() (uint32, error)                 { return 0, fmt.Errorf("no-hash") }
-func (f *Module) Attr(n string) (starlark.Value, error) { return star.Attr(f, n, builtins, properties) }
-func (f *Module) AttrNames() []string                   { return star.AttrNames(builtins, properties) }
-
-var builtins = map[string]*starlark.Builtin{
-	"sleep":              starlark.NewBuiltin("sleep", _sleep),
-	"time_ns":            starlark.NewBuiltin("time_ns", _time_ns),
-	"time":               starlark.NewBuiltin("time", _time),
-	"utc_format_seconds": starlark.NewBuiltin("utc_format_seconds", _utc_format_seconds),
-}
-
-var properties = map[string]star.PropertyFactory{}
+func (m *Module) String() string                        { return pluginID }
+func (m *Module) Type() string                          { return pluginID }
+func (m *Module) Freeze()                               {}
+func (m *Module) Truth() starlark.Bool                  { return true }
+func (m *Module) Hash() (uint32, error)                 { return 0, fmt.Errorf("no-hash") }
+func (m *Module) Attr(n string) (starlark.Value, error) { return m.attributes[n], nil }
+func (m *Module) AttrNames() []string                   { return ext.SortedKeys(m.attributes) }
 
 // _sleep suspends execution of the calling thread for the given number of seconds.
 // The argument may be a floating point number to indicate a more precise sleep time.
@@ -40,7 +49,7 @@ var properties = map[string]star.PropertyFactory{}
 //   - seconds: the number of seconds to sleep.
 //
 // Returns: None
-func _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func (m *Module) _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
@@ -68,18 +77,16 @@ func _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwarg
 
 // _time_ns is similar to _time but returns time as an integer number of nanoseconds since the epoch.
 // Returns: int
-func _time_ns(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
-	ctx := service.GetContext(t)
-	ns := workflow.Now(ctx).UnixNano()
+func (m *Module) _time_ns(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
+	ns := m.getEffectiveTime(t).UnixNano()
 	return starlark.MakeInt64(ns), nil
 }
 
 // _time returns the current unix time in seconds as floating point number.
 // Use _time_ns to avoid the precision loss caused by the float type.
 // Returns: float
-func _time(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
-	ctx := service.GetContext(t)
-	ns := workflow.Now(ctx).UnixNano()
+func (m *Module) _time(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
+	ns := m.getEffectiveTime(t).UnixNano()
 	sec := float64(ns) / 1e9
 	return starlark.Float(sec), nil
 }
@@ -90,7 +97,7 @@ func _time(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starla
 //   - seconds: the unix time in seconds.
 //
 // Returns: str
-func _utc_format_seconds(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kw []starlark.Tuple) (starlark.Value, error) {
+func (m *Module) _utc_format_seconds(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kw []starlark.Tuple) (starlark.Value, error) {
 	ctx := service.GetContext(t)
 	logger := workflow.GetLogger(ctx)
 
@@ -112,4 +119,11 @@ func _utc_format_seconds(t *starlark.Thread, _ *starlark.Builtin, args starlark.
 
 	res := time.Unix(int64(seconds), 0).UTC().Format(format)
 	return starlark.String(res), nil
+}
+
+// getEffectiveTime returns the current time, taking into account the delta duration, which is non-zero,
+// if the time is altered via the service.STARLARK_TIME environment variable.
+func (m *Module) getEffectiveTime(t *starlark.Thread) time.Time {
+	ctx := service.GetContext(t)
+	return workflow.Now(ctx).Add(m.delta)
 }

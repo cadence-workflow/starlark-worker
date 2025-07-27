@@ -1,4 +1,4 @@
-load("@plugin", "time", t = "test")
+load("@plugin", "os", "time", t = "test")
 
 def test_sleep():
     start_ts = time.time_ns()
@@ -15,3 +15,11 @@ def test_time():
     t.equal("float", type(seconds))
     datestr = time.utc_format_seconds("%Y-%m-%d", seconds)
     t.equal("string", type(datestr))
+
+def effective_time_test():
+    t.equal("unix:1753361232", os.environ["STARLARK_TIME"])
+    t.equal(float(1753361232), time.time())
+
+    sleep_seconds = 5
+    time.sleep(seconds = sleep_seconds)
+    t.equal(float(1753361232 + sleep_seconds), time.time())
