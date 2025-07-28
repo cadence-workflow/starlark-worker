@@ -265,7 +265,7 @@ func (r *Service) processError(ctx workflow.Context, err error) error {
 		details["backtrace"] = evalErr.Backtrace()
 	}
 	var workflowErr workflow.CustomError
-	var reason = err.Error()
+	var reason = yarpcerrors.CodeUnknown.String()
 	if errors.As(err, &workflowErr) {
 		reason = workflowErr.Reason()
 		if workflowErr.HasDetails() {
