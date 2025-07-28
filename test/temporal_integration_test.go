@@ -82,9 +82,8 @@ func (r *TempSuite) TestAtExit() {
 
 		var appError *temporalsdk.ApplicationError
 		require.True(errors.As(err, &appError))
-		// Commenting out flaky tests
-		//require.Equal("assert\nExpected : 200\nActual   : 404 (type: assert\nExpected : 200\nActual   : 404, retryable: true)", appError.Message())
-		//require.Equal("TemporalCustomError", appError.Type())
+		require.Equal("fail: injected error", appError.Message())
+		require.Equal("TemporalCustomError", appError.Type())
 	})
 
 	// make sure the test run did not leak any resources on the test server
