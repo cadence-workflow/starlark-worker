@@ -322,7 +322,20 @@ func (w TemporalWorkflow) WithWorkflowTaskList(ctx Context, name string) Context
 }
 
 func (w TemporalWorkflow) NewCustomError(reason string, details ...interface{}) CustomError {
-	err := temporal.NewApplicationError(reason, reason, details...)
+	var message = reason
+
+	// Check if the first detail is a map[string]interface{} and has key "error"
+	if len(details) > 0 {
+		if detailMap, ok := details[0].(map[string]interface{}); ok {
+			if errVal, exists := detailMap["error"]; exists {
+				if str, ok := errVal.(string); ok {
+					message = str
+				}
+			}
+		}
+	}
+
+	err := temporal.NewApplicationError(message, reason, details...)
 	return &TemporalCustomError{
 		ApplicationError: *err.(*temporal.ApplicationError),
 	}
