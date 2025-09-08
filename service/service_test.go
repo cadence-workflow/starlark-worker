@@ -166,6 +166,17 @@ func (r *TempTest) TestTempPluginFunction() {
 func TestServiceActivityOptionsConfiguration(t *testing.T) {
 	plugins := map[string]IPlugin{}
 	
+	t.Run("NewService", func(t *testing.T) {
+		service, err := NewService(plugins, "test-tasklist", TemporalBackend)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use default options with tasklist set
+		expected := DefaultActivityOptions
+		expected.TaskList = "test-tasklist"
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
 	t.Run("NewServiceWithDefaults", func(t *testing.T) {
 		service, err := NewServiceWithDefaults(plugins, "test-tasklist", TemporalBackend)
 		assert.NoError(t, err)
@@ -190,7 +201,7 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 			Summary:                "Custom activity summary",
 		}
 		
-		service, err := NewService(plugins, "test-tasklist", TemporalBackend, customOptions)
+		service, err := NewServiceWithOptions(plugins, "test-tasklist", TemporalBackend, customOptions)
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
@@ -198,8 +209,8 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 		assert.Equal(t, *customOptions, service.ActivityOptions)
 	})
 	
-	t.Run("NewServiceWithNilActivityOptions", func(t *testing.T) {
-		service, err := NewService(plugins, "test-tasklist", TemporalBackend, nil)
+	t.Run("NewServiceWithOptionsNil", func(t *testing.T) {
+		service, err := NewServiceWithOptions(plugins, "test-tasklist", TemporalBackend, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
@@ -209,13 +220,13 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 		assert.Equal(t, expected, service.ActivityOptions)
 	})
 	
-	t.Run("NewServiceWithPartialActivityOptions", func(t *testing.T) {
+	t.Run("NewServiceWithOptionsPartial", func(t *testing.T) {
 		partialOptions := &workflow.ActivityOptions{
 			StartToCloseTimeout: time.Minute * 10,
 			HeartbeatTimeout:    time.Second * 45,
 		}
 		
-		service, err := NewService(plugins, "test-tasklist", TemporalBackend, partialOptions)
+		service, err := NewServiceWithOptions(plugins, "test-tasklist", TemporalBackend, partialOptions)
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
@@ -225,13 +236,13 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 		assert.Equal(t, expected, service.ActivityOptions)
 	})
 	
-	t.Run("NewServiceTaskListOverride", func(t *testing.T) {
+	t.Run("NewServiceWithOptionsTaskListOverride", func(t *testing.T) {
 		customOptions := &workflow.ActivityOptions{
 			TaskList:            "options-tasklist", // This should be preserved
 			StartToCloseTimeout: time.Minute * 3,
 		}
 		
-		service, err := NewService(plugins, "param-tasklist", TemporalBackend, customOptions)
+		service, err := NewServiceWithOptions(plugins, "param-tasklist", TemporalBackend, customOptions)
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
@@ -240,13 +251,13 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 		assert.Equal(t, time.Minute*3, service.ActivityOptions.StartToCloseTimeout)
 	})
 	
-	t.Run("NewServiceEmptyTaskListInOptions", func(t *testing.T) {
+	t.Run("NewServiceWithOptionsEmptyTaskList", func(t *testing.T) {
 		customOptions := &workflow.ActivityOptions{
 			TaskList:            "", // Empty tasklist in options
 			StartToCloseTimeout: time.Minute * 3,
 		}
 		
-		service, err := NewService(plugins, "param-tasklist", TemporalBackend, customOptions)
+		service, err := NewServiceWithOptions(plugins, "param-tasklist", TemporalBackend, customOptions)
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		

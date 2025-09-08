@@ -64,7 +64,12 @@ type Service struct {
 	workflow workflow.Workflow
 }
 
-func NewService(plugins map[string]IPlugin, clientTaskList string, backendType BackendType, activityOptions *workflow.ActivityOptions) (*Service, error) {
+func NewService(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
+	return NewServiceWithOptions(plugins, clientTaskList, backendType, nil)
+}
+
+// NewServiceWithOptions creates a service with configurable ActivityOptions
+func NewServiceWithOptions(plugins map[string]IPlugin, clientTaskList string, backendType BackendType, activityOptions *workflow.ActivityOptions) (*Service, error) {
 	var be workflow.Workflow
 	switch backendType {
 	case CadenceBackend:
@@ -95,7 +100,7 @@ func NewService(plugins map[string]IPlugin, clientTaskList string, backendType B
 
 // NewServiceWithDefaults creates a service with default ActivityOptions for backward compatibility
 func NewServiceWithDefaults(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
-	return NewService(plugins, clientTaskList, backendType, nil)
+	return NewServiceWithOptions(plugins, clientTaskList, backendType, nil)
 }
 
 // TODO: [feature] Cadence workflow with starlark REPL (event listener loop?) starlark.ExecREPLChunk()
