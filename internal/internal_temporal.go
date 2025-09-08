@@ -236,6 +236,8 @@ func (w *TemporalWorkflow) WithActivityOptions(ctx Context, options ActivityOpti
 		HeartbeatTimeout:       options.HeartbeatTimeout,
 		WaitForCancellation:    options.WaitForCancellation,
 		ActivityID:             options.ActivityID,
+		DisableEagerExecution:  options.DisableEagerExecution,
+		Summary:                options.Summary,
 	}
 	if options.RetryPolicy != nil {
 		cadOptions.RetryPolicy = &temporal.RetryPolicy{
@@ -245,6 +247,10 @@ func (w *TemporalWorkflow) WithActivityOptions(ctx Context, options ActivityOpti
 			MaximumInterval:        options.RetryPolicy.MaximumInterval,
 			MaximumAttempts:        options.RetryPolicy.MaximumAttempts,
 		}
+	}
+	// Handle VersioningIntent mapping if needed
+	if options.VersioningIntent != 0 {
+		cadOptions.VersioningIntent = temporal.VersioningIntent(options.VersioningIntent)
 	}
 	return temp.WithActivityOptions(ctx.(temp.Context), cadOptions)
 }

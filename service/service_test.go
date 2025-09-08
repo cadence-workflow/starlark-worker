@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
 	"go.uber.org/zap"
@@ -158,4 +160,98 @@ func (r *TempTest) TestTempPluginFunction() {
 	var res starlark.String
 	require.NoError(r.env.GetResult(&res))
 	require.Equal(starlark.String(`("foo", 100)`), res)
+}
+
+// TestServiceActivityOptionsConfiguration tests Service creation with various ActivityOptions configurations
+func TestServiceActivityOptionsConfiguration(t *testing.T) {
+	plugins := map[string]IPlugin{}
+	
+	t.Run("NewServiceWithDefaults", func(t *testing.T) {
+		service, err := NewServiceWithDefaults(plugins, "test-tasklist", TemporalBackend)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use default options with tasklist set
+		expected := DefaultActivityOptions
+		expected.TaskList = "test-tasklist"
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
+	t.Run("NewServiceWithCustomActivityOptions", func(t *testing.T) {
+		customOptions := &workflow.ActivityOptions{
+			TaskList:               "custom-tasklist",
+			ScheduleToStartTimeout: time.Minute * 2,
+			StartToCloseTimeout:    time.Minute * 5,
+			HeartbeatTimeout:       time.Second * 30,
+			WaitForCancellation:    true,
+			ActivityID:             "custom-activity-id",
+			DisableEagerExecution:  true,
+			VersioningIntent:       1,
+			Summary:                "Custom activity summary",
+		}
+		
+		service, err := NewService(plugins, "test-tasklist", TemporalBackend, customOptions)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use custom options exactly as provided
+		assert.Equal(t, *customOptions, service.ActivityOptions)
+	})
+	
+	t.Run("NewServiceWithNilActivityOptions", func(t *testing.T) {
+		service, err := NewService(plugins, "test-tasklist", TemporalBackend, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use defaults with tasklist set
+		expected := DefaultActivityOptions
+		expected.TaskList = "test-tasklist"
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
+	t.Run("NewServiceWithPartialActivityOptions", func(t *testing.T) {
+		partialOptions := &workflow.ActivityOptions{
+			StartToCloseTimeout: time.Minute * 10,
+			HeartbeatTimeout:    time.Second * 45,
+		}
+		
+		service, err := NewService(plugins, "test-tasklist", TemporalBackend, partialOptions)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use partial options with tasklist filled in
+		expected := *partialOptions
+		expected.TaskList = "test-tasklist"
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
+	t.Run("NewServiceTaskListOverride", func(t *testing.T) {
+		customOptions := &workflow.ActivityOptions{
+			TaskList:            "options-tasklist", // This should be preserved
+			StartToCloseTimeout: time.Minute * 3,
+		}
+		
+		service, err := NewService(plugins, "param-tasklist", TemporalBackend, customOptions)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// TaskList from options should be preserved, not overridden
+		assert.Equal(t, "options-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, time.Minute*3, service.ActivityOptions.StartToCloseTimeout)
+	})
+	
+	t.Run("NewServiceEmptyTaskListInOptions", func(t *testing.T) {
+		customOptions := &workflow.ActivityOptions{
+			TaskList:            "", // Empty tasklist in options
+			StartToCloseTimeout: time.Minute * 3,
+		}
+		
+		service, err := NewService(plugins, "param-tasklist", TemporalBackend, customOptions)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Empty TaskList in options should be filled from parameter
+		assert.Equal(t, "param-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, time.Minute*3, service.ActivityOptions.StartToCloseTimeout)
+	})
 }

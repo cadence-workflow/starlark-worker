@@ -57,13 +57,14 @@ func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
 }
 
 type Service struct {
-	Plugins        map[string]IPlugin
-	ClientTaskList string
+	Plugins         map[string]IPlugin
+	ClientTaskList  string
+	ActivityOptions workflow.ActivityOptions
 
 	workflow workflow.Workflow
 }
 
-func NewService(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
+func NewService(plugins map[string]IPlugin, clientTaskList string, backendType BackendType, activityOptions *workflow.ActivityOptions) (*Service, error) {
 	var be workflow.Workflow
 	switch backendType {
 	case CadenceBackend:
@@ -74,11 +75,27 @@ func NewService(plugins map[string]IPlugin, clientTaskList string, backendType B
 		return nil, fmt.Errorf("unsupported backend: %s", backendType)
 	}
 
+	// Use provided ActivityOptions or fall back to defaults
+	ao := DefaultActivityOptions
+	if activityOptions != nil {
+		ao = *activityOptions
+	}
+	// Ensure TaskList is set from clientTaskList if not already specified
+	if ao.TaskList == "" {
+		ao.TaskList = clientTaskList
+	}
+
 	return &Service{
-		ClientTaskList: clientTaskList,
-		Plugins:        plugins,
-		workflow:       be,
+		ClientTaskList:  clientTaskList,
+		Plugins:         plugins,
+		ActivityOptions: ao,
+		workflow:        be,
 	}, nil
+}
+
+// NewServiceWithDefaults creates a service with default ActivityOptions for backward compatibility
+func NewServiceWithDefaults(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
+	return NewService(plugins, clientTaskList, backendType, nil)
 }
 
 // TODO: [feature] Cadence workflow with starlark REPL (event listener loop?) starlark.ExecREPLChunk()
@@ -125,8 +142,7 @@ func (r *Service) Run(
 		environ = &starlark.Dict{}
 	}
 
-	ao := DefaultActivityOptions
-	ao.TaskList = r.ClientTaskList
+	ao := r.ActivityOptions
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
 	cwo := DefaultChildWorkflowOptions
