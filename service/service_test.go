@@ -177,17 +177,6 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 		assert.Equal(t, expected, service.ActivityOptions)
 	})
 	
-	t.Run("NewServiceWithDefaults", func(t *testing.T) {
-		service, err := NewServiceWithDefaults(plugins, "test-tasklist", TemporalBackend)
-		assert.NoError(t, err)
-		assert.NotNil(t, service)
-		
-		// Should use default options with tasklist set
-		expected := DefaultActivityOptions
-		expected.TaskList = "test-tasklist"
-		assert.Equal(t, expected, service.ActivityOptions)
-	})
-	
 	t.Run("NewServiceWithCustomActivityOptions", func(t *testing.T) {
 		customOptions := &workflow.ActivityOptions{
 			TaskList:               "custom-tasklist",

@@ -97,7 +97,7 @@ func main() {
 	} else {
 		logger.Fatal("not supported backend", zap.String("backend", opt.Backend))
 	}
-	workerService, err := service.NewService(plugin.Registry, opt.ClientTaskList, backend, nil)
+	workerService, err := service.NewService(plugin.Registry, opt.ClientTaskList, backend)
 	if err != nil {
 		panic(err)
 	}

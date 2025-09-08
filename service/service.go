@@ -98,11 +98,6 @@ func NewServiceWithOptions(plugins map[string]IPlugin, clientTaskList string, ba
 	}, nil
 }
 
-// NewServiceWithDefaults creates a service with default ActivityOptions for backward compatibility
-func NewServiceWithDefaults(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
-	return NewServiceWithOptions(plugins, clientTaskList, backendType, nil)
-}
-
 // TODO: [feature] Cadence workflow with starlark REPL (event listener loop?) starlark.ExecREPLChunk()
 
 func (r *Service) Run(
