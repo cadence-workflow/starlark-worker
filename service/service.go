@@ -74,20 +74,6 @@ func NewService(plugins map[string]IPlugin, clientTaskList string, backendType B
 		Build()
 }
 
-// NewServiceWithOptions creates a service with configurable ActivityOptions
-// Deprecated: Use NewServiceBuilder instead for better extensibility and configuration
-func NewServiceWithOptions(plugins map[string]IPlugin, clientTaskList string, backendType BackendType, activityOptions *workflow.ActivityOptions) (*Service, error) {
-	builder := NewServiceBuilder(backendType).
-		SetPlugins(plugins).
-		SetClientTaskList(clientTaskList)
-	
-	if activityOptions != nil {
-		builder = builder.SetActivityOptions(*activityOptions)
-	}
-	
-	return builder.Build()
-}
-
 // ServiceBuilder provides a builder pattern for creating Service instances
 type ServiceBuilder struct {
 	backendType          BackendType
@@ -95,9 +81,6 @@ type ServiceBuilder struct {
 	clientTaskList       string
 	activityOptions      *workflow.ActivityOptions
 	childWorkflowOptions *workflow.ChildWorkflowOptions
-	// Future options can be added here:
-	// retryPolicy *workflow.RetryPolicy
-	// metricsConfig *MetricsConfig
 }
 
 // NewServiceBuilder creates a new ServiceBuilder with the specified backend type
@@ -149,7 +132,7 @@ func (b *ServiceBuilder) Build() (*Service, error) {
 	if b.activityOptions != nil {
 		ao = *b.activityOptions
 	}
-	
+
 	// If TaskList is not set in ActivityOptions, use clientTaskList as default
 	if ao.TaskList == "" && b.clientTaskList != "" {
 		ao.TaskList = b.clientTaskList
@@ -160,7 +143,7 @@ func (b *ServiceBuilder) Build() (*Service, error) {
 	if b.childWorkflowOptions != nil {
 		cwo = *b.childWorkflowOptions
 	}
-	
+
 	// If TaskList is not set in ChildWorkflowOptions, use clientTaskList as default
 	if cwo.TaskList == "" && b.clientTaskList != "" {
 		cwo.TaskList = b.clientTaskList

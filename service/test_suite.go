@@ -179,7 +179,10 @@ func (r *StarCadTestSuite) NewCadEnvironment(t *testing.T, p *StarCadTestEnviron
 		BackgroundActivityContext: ctx,
 	})
 
-	service, serviceErr := NewService(p.Plugins, "test", CadenceBackend)
+	service, serviceErr := NewServiceBuilder(CadenceBackend).
+		SetPlugins(p.Plugins).
+		SetClientTaskList("test").
+		Build()
 
 	require.NoError(t, serviceErr)
 	service.Register(cadRegistry{env: env})
@@ -358,7 +361,10 @@ func (r *StarTempTestSuite) NewTempEnvironment(t *testing.T, p *StarTempTestEnvi
 	})
 	env.SetContextPropagators([]tmpworkflow.ContextPropagator{&temporal.HeadersContextPropagator{}})
 	env.SetDataConverter(temporal.DataConverter{})
-	service, serviceErr := NewService(p.Plugins, "test", TemporalBackend)
+	service, serviceErr := NewServiceBuilder(TemporalBackend).
+		SetPlugins(p.Plugins).
+		SetClientTaskList("test").
+		Build()
 	require.NoError(t, serviceErr)
 
 	service.Register(tempRegistry{env: env})
