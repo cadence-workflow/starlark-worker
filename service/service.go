@@ -57,44 +57,121 @@ func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
 }
 
 type Service struct {
-	Plugins         map[string]IPlugin
-	ClientTaskList  string
-	ActivityOptions workflow.ActivityOptions
+	Plugins              map[string]IPlugin
+	ClientTaskList       string
+	ActivityOptions      workflow.ActivityOptions
+	ChildWorkflowOptions workflow.ChildWorkflowOptions
 
 	workflow workflow.Workflow
 }
 
+// NewService creates a service with default options
+// Deprecated: Use NewServiceBuilder instead for better extensibility and configuration
 func NewService(plugins map[string]IPlugin, clientTaskList string, backendType BackendType) (*Service, error) {
-	return NewServiceWithOptions(plugins, clientTaskList, backendType, nil)
+	return NewServiceBuilder(backendType).
+		SetPlugins(plugins).
+		SetClientTaskList(clientTaskList).
+		Build()
 }
 
 // NewServiceWithOptions creates a service with configurable ActivityOptions
+// Deprecated: Use NewServiceBuilder instead for better extensibility and configuration
 func NewServiceWithOptions(plugins map[string]IPlugin, clientTaskList string, backendType BackendType, activityOptions *workflow.ActivityOptions) (*Service, error) {
+	builder := NewServiceBuilder(backendType).
+		SetPlugins(plugins).
+		SetClientTaskList(clientTaskList)
+	
+	if activityOptions != nil {
+		builder = builder.SetActivityOptions(*activityOptions)
+	}
+	
+	return builder.Build()
+}
+
+// ServiceBuilder provides a builder pattern for creating Service instances
+type ServiceBuilder struct {
+	backendType          BackendType
+	plugins              map[string]IPlugin
+	clientTaskList       string
+	activityOptions      *workflow.ActivityOptions
+	childWorkflowOptions *workflow.ChildWorkflowOptions
+	// Future options can be added here:
+	// retryPolicy *workflow.RetryPolicy
+	// metricsConfig *MetricsConfig
+}
+
+// NewServiceBuilder creates a new ServiceBuilder with the specified backend type
+func NewServiceBuilder(backendType BackendType) *ServiceBuilder {
+	return &ServiceBuilder{
+		backendType: backendType,
+		plugins:     make(map[string]IPlugin),
+	}
+}
+
+// SetPlugins sets the plugin registry
+func (b *ServiceBuilder) SetPlugins(plugins map[string]IPlugin) *ServiceBuilder {
+	b.plugins = plugins
+	return b
+}
+
+// SetClientTaskList sets the default client task list for the service
+func (b *ServiceBuilder) SetClientTaskList(taskList string) *ServiceBuilder {
+	b.clientTaskList = taskList
+	return b
+}
+
+// SetActivityOptions sets the activity options configuration
+func (b *ServiceBuilder) SetActivityOptions(options workflow.ActivityOptions) *ServiceBuilder {
+	b.activityOptions = &options
+	return b
+}
+
+// SetChildWorkflowOptions sets the child workflow options configuration
+func (b *ServiceBuilder) SetChildWorkflowOptions(options workflow.ChildWorkflowOptions) *ServiceBuilder {
+	b.childWorkflowOptions = &options
+	return b
+}
+
+// Build creates the Service instance with the configured options
+func (b *ServiceBuilder) Build() (*Service, error) {
 	var be workflow.Workflow
-	switch backendType {
+	switch b.backendType {
 	case CadenceBackend:
 		be = cadence.NewWorkflow()
 	case TemporalBackend:
 		be = temporal.NewWorkflow()
 	default:
-		return nil, fmt.Errorf("unsupported backend: %s", backendType)
+		return nil, fmt.Errorf("unsupported backend: %s", b.backendType)
 	}
 
 	// Use provided ActivityOptions or fall back to defaults
 	ao := DefaultActivityOptions
-	if activityOptions != nil {
-		ao = *activityOptions
+	if b.activityOptions != nil {
+		ao = *b.activityOptions
 	}
-	// Ensure TaskList is set from clientTaskList if not already specified
-	if ao.TaskList == "" {
-		ao.TaskList = clientTaskList
+	
+	// If TaskList is not set in ActivityOptions, use clientTaskList as default
+	if ao.TaskList == "" && b.clientTaskList != "" {
+		ao.TaskList = b.clientTaskList
+	}
+
+	// Use provided ChildWorkflowOptions or fall back to defaults
+	cwo := DefaultChildWorkflowOptions
+	if b.childWorkflowOptions != nil {
+		cwo = *b.childWorkflowOptions
+	}
+	
+	// If TaskList is not set in ChildWorkflowOptions, use clientTaskList as default
+	if cwo.TaskList == "" && b.clientTaskList != "" {
+		cwo.TaskList = b.clientTaskList
 	}
 
 	return &Service{
-		ClientTaskList:  clientTaskList,
-		Plugins:         plugins,
-		ActivityOptions: ao,
-		workflow:        be,
+		ClientTaskList:       b.clientTaskList,
+		Plugins:              b.plugins,
+		ActivityOptions:      ao,
+		ChildWorkflowOptions: cwo,
+		workflow:             be,
 	}, nil
 }
 
@@ -145,8 +222,7 @@ func (r *Service) Run(
 	ao := r.ActivityOptions
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
-	cwo := DefaultChildWorkflowOptions
-	cwo.TaskList = r.ClientTaskList
+	cwo := r.ChildWorkflowOptions
 	ctx = workflow.WithChildOptions(ctx, cwo)
 
 	globals := &_Globals{

@@ -166,7 +166,7 @@ func (r *TempTest) TestTempPluginFunction() {
 func TestServiceActivityOptionsConfiguration(t *testing.T) {
 	plugins := map[string]IPlugin{}
 	
-	t.Run("NewService", func(t *testing.T) {
+	t.Run("NewService_BackwardCompatibility", func(t *testing.T) {
 		service, err := NewService(plugins, "test-tasklist", TemporalBackend)
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
@@ -177,8 +177,20 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 		assert.Equal(t, expected, service.ActivityOptions)
 	})
 	
-	t.Run("NewServiceWithCustomActivityOptions", func(t *testing.T) {
-		customOptions := &workflow.ActivityOptions{
+	t.Run("ServiceBuilder_BasicUsage", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use default options
+		expected := DefaultActivityOptions
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
+	t.Run("ServiceBuilder_WithActivityOptions", func(t *testing.T) {
+		customOptions := workflow.ActivityOptions{
 			TaskList:               "custom-tasklist",
 			ScheduleToStartTimeout: time.Minute * 2,
 			StartToCloseTimeout:    time.Minute * 5,
@@ -190,68 +202,169 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 			Summary:                "Custom activity summary",
 		}
 		
-		service, err := NewServiceWithOptions(plugins, "test-tasklist", TemporalBackend, customOptions)
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetActivityOptions(customOptions).
+			Build()
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
 		// Should use custom options exactly as provided
-		assert.Equal(t, *customOptions, service.ActivityOptions)
+		assert.Equal(t, customOptions, service.ActivityOptions)
 	})
 	
-	t.Run("NewServiceWithOptionsNil", func(t *testing.T) {
-		service, err := NewServiceWithOptions(plugins, "test-tasklist", TemporalBackend, nil)
+	t.Run("ServiceBuilder_WithClientTaskList", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("service-default-tasklist").
+			Build()
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
-		// Should use defaults with tasklist set
+		// Should use default options with service-level tasklist set
 		expected := DefaultActivityOptions
-		expected.TaskList = "test-tasklist"
+		expected.TaskList = "service-default-tasklist"
 		assert.Equal(t, expected, service.ActivityOptions)
+		assert.Equal(t, "service-default-tasklist", service.ClientTaskList)
 	})
 	
-	t.Run("NewServiceWithOptionsPartial", func(t *testing.T) {
-		partialOptions := &workflow.ActivityOptions{
+	t.Run("ServiceBuilder_ActivityOptionsOverrideClientTaskList", func(t *testing.T) {
+		customOptions := workflow.ActivityOptions{
+			TaskList:            "activity-options-tasklist",
+			StartToCloseTimeout: time.Minute * 3,
+		}
+		
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("legacy-tasklist").
+			SetActivityOptions(customOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// ActivityOptions should take precedence
+		assert.Equal(t, "activity-options-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, time.Minute*3, service.ActivityOptions.StartToCloseTimeout)
+		assert.Equal(t, "legacy-tasklist", service.ClientTaskList) // For backward compatibility
+	})
+	
+	t.Run("ServiceBuilder_FluentInterface", func(t *testing.T) {
+		customOptions := workflow.ActivityOptions{
 			StartToCloseTimeout: time.Minute * 10,
 			HeartbeatTimeout:    time.Second * 45,
 		}
 		
-		service, err := NewServiceWithOptions(plugins, "test-tasklist", TemporalBackend, partialOptions)
+		// Demonstrate fluent interface
+		service, err := NewServiceBuilder(CadenceBackend).
+			SetPlugins(plugins).
+			SetActivityOptions(customOptions).
+			Build()
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
-		// Should use partial options with tasklist filled in
-		expected := *partialOptions
-		expected.TaskList = "test-tasklist"
+		expected := customOptions
 		assert.Equal(t, expected, service.ActivityOptions)
 	})
 	
-	t.Run("NewServiceWithOptionsTaskListOverride", func(t *testing.T) {
-		customOptions := &workflow.ActivityOptions{
-			TaskList:            "options-tasklist", // This should be preserved
-			StartToCloseTimeout: time.Minute * 3,
+	t.Run("ServiceBuilder_InvalidBackend", func(t *testing.T) {
+		_, err := NewServiceBuilder("invalid-backend").
+			SetPlugins(plugins).
+			Build()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported backend")
+	})
+}
+
+// TestServiceChildWorkflowOptionsConfiguration tests ChildWorkflowOptions configuration
+func TestServiceChildWorkflowOptionsConfiguration(t *testing.T) {
+	plugins := map[string]IPlugin{}
+	
+	t.Run("ServiceBuilder_WithChildWorkflowOptions", func(t *testing.T) {
+		customChildOptions := workflow.ChildWorkflowOptions{
+			TaskList:                     "child-worker-pool",
+			ExecutionStartToCloseTimeout: time.Hour * 2,
+			TaskStartToCloseTimeout:      time.Minute * 5,
+			WaitForCancellation:          true,
+			WorkflowID:                   "custom-child-workflow-id",
 		}
 		
-		service, err := NewServiceWithOptions(plugins, "param-tasklist", TemporalBackend, customOptions)
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetChildWorkflowOptions(customChildOptions).
+			Build()
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
-		// TaskList from options should be preserved, not overridden
-		assert.Equal(t, "options-tasklist", service.ActivityOptions.TaskList)
-		assert.Equal(t, time.Minute*3, service.ActivityOptions.StartToCloseTimeout)
+		// Should use custom child workflow options exactly as provided
+		assert.Equal(t, customChildOptions, service.ChildWorkflowOptions)
 	})
 	
-	t.Run("NewServiceWithOptionsEmptyTaskList", func(t *testing.T) {
-		customOptions := &workflow.ActivityOptions{
-			TaskList:            "", // Empty tasklist in options
-			StartToCloseTimeout: time.Minute * 3,
+	t.Run("ServiceBuilder_WithBothActivityAndChildOptions", func(t *testing.T) {
+		activityOptions := workflow.ActivityOptions{
+			TaskList:            "activity-worker-pool",
+			StartToCloseTimeout: time.Minute * 10,
 		}
 		
-		service, err := NewServiceWithOptions(plugins, "param-tasklist", TemporalBackend, customOptions)
+		childOptions := workflow.ChildWorkflowOptions{
+			TaskList:                     "child-worker-pool", 
+			ExecutionStartToCloseTimeout: time.Hour * 1,
+		}
+		
+		service, err := NewServiceBuilder(CadenceBackend).
+			SetPlugins(plugins).
+			SetActivityOptions(activityOptions).
+			SetChildWorkflowOptions(childOptions).
+			Build()
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
-		// Empty TaskList in options should be filled from parameter
-		assert.Equal(t, "param-tasklist", service.ActivityOptions.TaskList)
-		assert.Equal(t, time.Minute*3, service.ActivityOptions.StartToCloseTimeout)
+		// Both options should be set correctly
+		assert.Equal(t, activityOptions, service.ActivityOptions)
+		assert.Equal(t, childOptions, service.ChildWorkflowOptions)
+	})
+	
+	t.Run("ServiceBuilder_ChildOptionsWithClientTaskListFallback", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("service-default-tasklist").
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// ChildWorkflowOptions should use clientTaskList as default
+		expected := DefaultChildWorkflowOptions
+		expected.TaskList = "service-default-tasklist"
+		assert.Equal(t, expected, service.ChildWorkflowOptions)
+	})
+	
+	t.Run("ServiceBuilder_ChildOptionsOverrideClientTaskList", func(t *testing.T) {
+		childOptions := workflow.ChildWorkflowOptions{
+			TaskList:                     "child-specific-tasklist",
+			ExecutionStartToCloseTimeout: time.Hour * 3,
+		}
+		
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("service-default-tasklist").
+			SetChildWorkflowOptions(childOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// ChildWorkflowOptions should take precedence over clientTaskList
+		assert.Equal(t, "child-specific-tasklist", service.ChildWorkflowOptions.TaskList)
+		assert.Equal(t, time.Hour*3, service.ChildWorkflowOptions.ExecutionStartToCloseTimeout)
+		assert.Equal(t, "service-default-tasklist", service.ClientTaskList) // Still preserved
+	})
+	
+	t.Run("ServiceBuilder_DefaultChildWorkflowOptions", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use default child workflow options
+		assert.Equal(t, DefaultChildWorkflowOptions, service.ChildWorkflowOptions)
 	})
 }
