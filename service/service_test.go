@@ -217,14 +217,14 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 		service, err := NewServiceBuilder(TemporalBackend).
 			SetPlugins(plugins).
 			SetClientTaskList("service-default-tasklist").
+			SetTaskList("service-default-tasklist").  // Explicitly set TaskList
 			Build()
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
-		// Should use default options with service-level tasklist set
-		expected := DefaultActivityOptions
-		expected.TaskList = "service-default-tasklist"
-		assert.Equal(t, expected, service.ActivityOptions)
+		// Should use explicitly set TaskList
+		assert.Equal(t, "service-default-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, "service-default-tasklist", service.ChildWorkflowOptions.TaskList)
 		assert.Equal(t, "service-default-tasklist", service.ClientTaskList)
 	})
 	
@@ -272,6 +272,23 @@ func TestServiceActivityOptionsConfiguration(t *testing.T) {
 			Build()
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported backend")
+	})
+	
+	t.Run("ServiceBuilder_SetTaskListConvenience", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetTaskList("unified-tasklist").
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Both ActivityOptions and ChildWorkflowOptions should have the same TaskList
+		assert.Equal(t, "unified-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, "unified-tasklist", service.ChildWorkflowOptions.TaskList)
+		
+		// Should preserve other default values
+		assert.Equal(t, DefaultActivityOptions.StartToCloseTimeout, service.ActivityOptions.StartToCloseTimeout)
+		assert.Equal(t, DefaultChildWorkflowOptions.ExecutionStartToCloseTimeout, service.ChildWorkflowOptions.ExecutionStartToCloseTimeout)
 	})
 }
 
@@ -327,14 +344,14 @@ func TestServiceChildWorkflowOptionsConfiguration(t *testing.T) {
 		service, err := NewServiceBuilder(TemporalBackend).
 			SetPlugins(plugins).
 			SetClientTaskList("service-default-tasklist").
+			SetTaskList("service-default-tasklist").  // Explicitly set TaskList
 			Build()
 		assert.NoError(t, err)
 		assert.NotNil(t, service)
 		
-		// ChildWorkflowOptions should use clientTaskList as default
-		expected := DefaultChildWorkflowOptions
-		expected.TaskList = "service-default-tasklist"
-		assert.Equal(t, expected, service.ChildWorkflowOptions)
+		// Should use explicitly set TaskList 
+		assert.Equal(t, "service-default-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, "service-default-tasklist", service.ChildWorkflowOptions.TaskList)
 	})
 	
 	t.Run("ServiceBuilder_ChildOptionsOverrideClientTaskList", func(t *testing.T) {

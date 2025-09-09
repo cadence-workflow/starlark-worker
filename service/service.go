@@ -71,6 +71,7 @@ func NewService(plugins map[string]IPlugin, clientTaskList string, backendType B
 	return NewServiceBuilder(backendType).
 		SetPlugins(plugins).
 		SetClientTaskList(clientTaskList).
+		SetTaskList(clientTaskList).  // Set TaskList across all options for backward compatibility
 		Build()
 }
 
@@ -115,6 +116,26 @@ func (b *ServiceBuilder) SetChildWorkflowOptions(options workflow.ChildWorkflowO
 	return b
 }
 
+// SetTaskList sets the TaskList for both ActivityOptions and ChildWorkflowOptions
+// This is a convenience method for setting TaskList across all option types
+func (b *ServiceBuilder) SetTaskList(taskList string) *ServiceBuilder {
+	// Set ActivityOptions TaskList
+	if b.activityOptions == nil {
+		ao := DefaultActivityOptions
+		b.activityOptions = &ao
+	}
+	b.activityOptions.TaskList = taskList
+	
+	// Set ChildWorkflowOptions TaskList  
+	if b.childWorkflowOptions == nil {
+		cwo := DefaultChildWorkflowOptions
+		b.childWorkflowOptions = &cwo
+	}
+	b.childWorkflowOptions.TaskList = taskList
+	
+	return b
+}
+
 // Build creates the Service instance with the configured options
 func (b *ServiceBuilder) Build() (*Service, error) {
 	var be workflow.Workflow
@@ -133,20 +154,10 @@ func (b *ServiceBuilder) Build() (*Service, error) {
 		ao = *b.activityOptions
 	}
 
-	// If TaskList is not set in ActivityOptions, use clientTaskList as default
-	if ao.TaskList == "" && b.clientTaskList != "" {
-		ao.TaskList = b.clientTaskList
-	}
-
 	// Use provided ChildWorkflowOptions or fall back to defaults
 	cwo := DefaultChildWorkflowOptions
 	if b.childWorkflowOptions != nil {
 		cwo = *b.childWorkflowOptions
-	}
-
-	// If TaskList is not set in ChildWorkflowOptions, use clientTaskList as default
-	if cwo.TaskList == "" && b.clientTaskList != "" {
-		cwo.TaskList = b.clientTaskList
 	}
 
 	return &Service{
