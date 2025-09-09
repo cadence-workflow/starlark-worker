@@ -164,6 +164,24 @@ type ActivityOptions struct {
 	// Same apply to ScheduleToCloseTimeout. See more details about RetryPolicy on the doc for RetryPolicy.
 	// Optional: default is no retry
 	RetryPolicy *RetryPolicy
+
+	// DisableEagerExecution - If true, eager execution will not be requested, regardless of worker settings.
+	// If false, eager execution may still be disabled at the worker level or
+	// may not be requested due to lack of available slots.
+	// Optional: default false
+	DisableEagerExecution bool
+
+	// VersioningIntent - Specifies whether this activity should run on a worker with a compatible
+	// build ID or not. See temporal.VersioningIntent.
+	// WARNING: Worker versioning is currently experimental
+	// Optional: default 0
+	VersioningIntent int
+
+	// Summary - A single-line summary for this activity that will appear in UI/CLI. This can be
+	// in single-line Temporal Markdown format.
+	// Optional: defaults to none/empty.
+	// NOTE: Experimental
+	Summary string
 }
 
 type ChildWorkflowFuture interface {

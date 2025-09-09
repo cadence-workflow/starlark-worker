@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.starlark.net/starlark"
 	"go.uber.org/zap"
@@ -158,4 +160,223 @@ func (r *TempTest) TestTempPluginFunction() {
 	var res starlark.String
 	require.NoError(r.env.GetResult(&res))
 	require.Equal(starlark.String(`("foo", 100)`), res)
+}
+
+// TestServiceActivityOptionsConfiguration tests Service creation with various ActivityOptions configurations
+func TestServiceActivityOptionsConfiguration(t *testing.T) {
+	plugins := map[string]IPlugin{}
+	
+	t.Run("NewService_BackwardCompatibility", func(t *testing.T) {
+		service, err := NewService(plugins, "test-tasklist", TemporalBackend)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use default options with tasklist set
+		expected := DefaultActivityOptions
+		expected.TaskList = "test-tasklist"
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
+	t.Run("ServiceBuilder_BasicUsage", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use default options
+		expected := DefaultActivityOptions
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
+	t.Run("ServiceBuilder_WithActivityOptions", func(t *testing.T) {
+		customOptions := workflow.ActivityOptions{
+			TaskList:               "custom-tasklist",
+			ScheduleToStartTimeout: time.Minute * 2,
+			StartToCloseTimeout:    time.Minute * 5,
+			HeartbeatTimeout:       time.Second * 30,
+			WaitForCancellation:    true,
+			ActivityID:             "custom-activity-id",
+			DisableEagerExecution:  true,
+			VersioningIntent:       1,
+			Summary:                "Custom activity summary",
+		}
+		
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetActivityOptions(customOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use custom options exactly as provided
+		assert.Equal(t, customOptions, service.ActivityOptions)
+	})
+	
+	t.Run("ServiceBuilder_WithClientTaskList", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("service-default-tasklist").
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use explicitly set TaskList
+		assert.Equal(t, "service-default-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, "service-default-tasklist", service.ChildWorkflowOptions.TaskList)
+	})
+	
+	t.Run("ServiceBuilder_ActivityOptionsOverrideClientTaskList", func(t *testing.T) {
+		customOptions := workflow.ActivityOptions{
+			TaskList:            "activity-options-tasklist",
+			StartToCloseTimeout: time.Minute * 3,
+		}
+		
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("legacy-tasklist").
+			SetActivityOptions(customOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// ActivityOptions should take precedence
+		assert.Equal(t, "activity-options-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, time.Minute*3, service.ActivityOptions.StartToCloseTimeout)
+	})
+	
+	t.Run("ServiceBuilder_FluentInterface", func(t *testing.T) {
+		customOptions := workflow.ActivityOptions{
+			StartToCloseTimeout: time.Minute * 10,
+			HeartbeatTimeout:    time.Second * 45,
+		}
+		
+		// Demonstrate fluent interface
+		service, err := NewServiceBuilder(CadenceBackend).
+			SetPlugins(plugins).
+			SetActivityOptions(customOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		expected := customOptions
+		assert.Equal(t, expected, service.ActivityOptions)
+	})
+	
+	t.Run("ServiceBuilder_InvalidBackend", func(t *testing.T) {
+		_, err := NewServiceBuilder("invalid-backend").
+			SetPlugins(plugins).
+			Build()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported backend")
+	})
+	
+	t.Run("ServiceBuilder_SetTaskListConvenience", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("unified-tasklist").
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Both ActivityOptions and ChildWorkflowOptions should have the same TaskList
+		assert.Equal(t, "unified-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, "unified-tasklist", service.ChildWorkflowOptions.TaskList)
+		
+		// Should preserve other default values
+		assert.Equal(t, DefaultActivityOptions.StartToCloseTimeout, service.ActivityOptions.StartToCloseTimeout)
+		assert.Equal(t, DefaultChildWorkflowOptions.ExecutionStartToCloseTimeout, service.ChildWorkflowOptions.ExecutionStartToCloseTimeout)
+	})
+}
+
+// TestServiceChildWorkflowOptionsConfiguration tests ChildWorkflowOptions configuration
+func TestServiceChildWorkflowOptionsConfiguration(t *testing.T) {
+	plugins := map[string]IPlugin{}
+	
+	t.Run("ServiceBuilder_WithChildWorkflowOptions", func(t *testing.T) {
+		customChildOptions := workflow.ChildWorkflowOptions{
+			TaskList:                     "child-worker-pool",
+			ExecutionStartToCloseTimeout: time.Hour * 2,
+			TaskStartToCloseTimeout:      time.Minute * 5,
+			WaitForCancellation:          true,
+			WorkflowID:                   "custom-child-workflow-id",
+		}
+		
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetChildWorkflowOptions(customChildOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use custom child workflow options exactly as provided
+		assert.Equal(t, customChildOptions, service.ChildWorkflowOptions)
+	})
+	
+	t.Run("ServiceBuilder_WithBothActivityAndChildOptions", func(t *testing.T) {
+		activityOptions := workflow.ActivityOptions{
+			TaskList:            "activity-worker-pool",
+			StartToCloseTimeout: time.Minute * 10,
+		}
+		
+		childOptions := workflow.ChildWorkflowOptions{
+			TaskList:                     "child-worker-pool", 
+			ExecutionStartToCloseTimeout: time.Hour * 1,
+		}
+		
+		service, err := NewServiceBuilder(CadenceBackend).
+			SetPlugins(plugins).
+			SetActivityOptions(activityOptions).
+			SetChildWorkflowOptions(childOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Both options should be set correctly
+		assert.Equal(t, activityOptions, service.ActivityOptions)
+		assert.Equal(t, childOptions, service.ChildWorkflowOptions)
+	})
+	
+	t.Run("ServiceBuilder_ChildOptionsWithClientTaskListFallback", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("service-default-tasklist").
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use explicitly set TaskList 
+		assert.Equal(t, "service-default-tasklist", service.ActivityOptions.TaskList)
+		assert.Equal(t, "service-default-tasklist", service.ChildWorkflowOptions.TaskList)
+	})
+	
+	t.Run("ServiceBuilder_ChildOptionsOverrideClientTaskList", func(t *testing.T) {
+		childOptions := workflow.ChildWorkflowOptions{
+			TaskList:                     "child-specific-tasklist",
+			ExecutionStartToCloseTimeout: time.Hour * 3,
+		}
+		
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			SetClientTaskList("service-default-tasklist").
+			SetChildWorkflowOptions(childOptions).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// ChildWorkflowOptions should take precedence over clientTaskList
+		assert.Equal(t, "child-specific-tasklist", service.ChildWorkflowOptions.TaskList)
+		assert.Equal(t, time.Hour*3, service.ChildWorkflowOptions.ExecutionStartToCloseTimeout)
+	})
+	
+	t.Run("ServiceBuilder_DefaultChildWorkflowOptions", func(t *testing.T) {
+		service, err := NewServiceBuilder(TemporalBackend).
+			SetPlugins(plugins).
+			Build()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		
+		// Should use default child workflow options
+		assert.Equal(t, DefaultChildWorkflowOptions, service.ChildWorkflowOptions)
+	})
 }
