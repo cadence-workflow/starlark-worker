@@ -58,7 +58,6 @@ func (r *_Globals) getEnviron(key starlark.String) (starlark.String, bool) {
 
 type Service struct {
 	Plugins              map[string]IPlugin
-	ClientTaskList       string
 	ActivityOptions      workflow.ActivityOptions
 	ChildWorkflowOptions workflow.ChildWorkflowOptions
 
@@ -71,7 +70,6 @@ func NewService(plugins map[string]IPlugin, clientTaskList string, backendType B
 	return NewServiceBuilder(backendType).
 		SetPlugins(plugins).
 		SetClientTaskList(clientTaskList).
-		SetTaskList(clientTaskList).  // Set TaskList across all options for backward compatibility
 		Build()
 }
 
@@ -79,16 +77,17 @@ func NewService(plugins map[string]IPlugin, clientTaskList string, backendType B
 type ServiceBuilder struct {
 	backendType          BackendType
 	plugins              map[string]IPlugin
-	clientTaskList       string
-	activityOptions      *workflow.ActivityOptions
-	childWorkflowOptions *workflow.ChildWorkflowOptions
+	activityOptions      workflow.ActivityOptions
+	childWorkflowOptions workflow.ChildWorkflowOptions
 }
 
 // NewServiceBuilder creates a new ServiceBuilder with the specified backend type
 func NewServiceBuilder(backendType BackendType) *ServiceBuilder {
 	return &ServiceBuilder{
-		backendType: backendType,
-		plugins:     make(map[string]IPlugin),
+		backendType:          backendType,
+		plugins:              make(map[string]IPlugin),
+		activityOptions:      DefaultActivityOptions,
+		childWorkflowOptions: DefaultChildWorkflowOptions,
 	}
 }
 
@@ -98,41 +97,23 @@ func (b *ServiceBuilder) SetPlugins(plugins map[string]IPlugin) *ServiceBuilder 
 	return b
 }
 
-// SetClientTaskList sets the default client task list for the service
+// SetClientTaskList sets the TaskList for both ActivityOptions and ChildWorkflowOptions
 func (b *ServiceBuilder) SetClientTaskList(taskList string) *ServiceBuilder {
-	b.clientTaskList = taskList
+	// Override TaskList in both ActivityOptions and ChildWorkflowOptions
+	b.activityOptions.TaskList = taskList
+	b.childWorkflowOptions.TaskList = taskList
 	return b
 }
 
 // SetActivityOptions sets the activity options configuration
 func (b *ServiceBuilder) SetActivityOptions(options workflow.ActivityOptions) *ServiceBuilder {
-	b.activityOptions = &options
+	b.activityOptions = options
 	return b
 }
 
 // SetChildWorkflowOptions sets the child workflow options configuration
 func (b *ServiceBuilder) SetChildWorkflowOptions(options workflow.ChildWorkflowOptions) *ServiceBuilder {
-	b.childWorkflowOptions = &options
-	return b
-}
-
-// SetTaskList sets the TaskList for both ActivityOptions and ChildWorkflowOptions
-// This is a convenience method for setting TaskList across all option types
-func (b *ServiceBuilder) SetTaskList(taskList string) *ServiceBuilder {
-	// Set ActivityOptions TaskList
-	if b.activityOptions == nil {
-		ao := DefaultActivityOptions
-		b.activityOptions = &ao
-	}
-	b.activityOptions.TaskList = taskList
-	
-	// Set ChildWorkflowOptions TaskList  
-	if b.childWorkflowOptions == nil {
-		cwo := DefaultChildWorkflowOptions
-		b.childWorkflowOptions = &cwo
-	}
-	b.childWorkflowOptions.TaskList = taskList
-	
+	b.childWorkflowOptions = options
 	return b
 }
 
@@ -148,20 +129,11 @@ func (b *ServiceBuilder) Build() (*Service, error) {
 		return nil, fmt.Errorf("unsupported backend: %s", b.backendType)
 	}
 
-	// Use provided ActivityOptions or fall back to defaults
-	ao := DefaultActivityOptions
-	if b.activityOptions != nil {
-		ao = *b.activityOptions
-	}
-
-	// Use provided ChildWorkflowOptions or fall back to defaults
-	cwo := DefaultChildWorkflowOptions
-	if b.childWorkflowOptions != nil {
-		cwo = *b.childWorkflowOptions
-	}
+	// Use configured ActivityOptions and ChildWorkflowOptions
+	ao := b.activityOptions
+	cwo := b.childWorkflowOptions
 
 	return &Service{
-		ClientTaskList:       b.clientTaskList,
 		Plugins:              b.plugins,
 		ActivityOptions:      ao,
 		ChildWorkflowOptions: cwo,
