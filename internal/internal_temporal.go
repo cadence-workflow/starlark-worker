@@ -69,6 +69,11 @@ type temporalSettable struct {
 	s temp.Settable
 }
 
+// temporalSelector implements Selector interface
+type temporalSelector struct {
+	s temp.Selector
+}
+
 // TemporalWorker is a wrapper around the Temporal SDK worker interface.
 type TemporalWorker struct {
 	Worker tmpworker.Worker
@@ -370,6 +375,25 @@ func (w TemporalWorkflow) Go(ctx Context, f func(ctx Context)) {
 	temp.Go(ctx.(temp.Context), func(c temp.Context) {
 		f(c)
 	})
+}
+
+// NewSelector creates a new selector for deterministic workflow operations.
+func (w TemporalWorkflow) NewSelector(ctx Context) Selector {
+	s := temp.NewSelector(ctx.(temp.Context))
+	return &temporalSelector{s: s}
+}
+
+// AddFuture adds a future case to the selector.
+func (s *temporalSelector) AddFuture(future Future, f func(f Future)) Selector {
+	s.s.AddFuture(future.(*temporalFuture).f, func(fut temp.Future) {
+		f(&temporalFuture{f: fut})
+	})
+	return s
+}
+
+// Select executes the selector and waits for one of the cases to be ready.
+func (s *temporalSelector) Select(ctx Context) {
+	s.s.Select(ctx.(temp.Context))
 }
 
 type ZapLoggerAdapter struct {

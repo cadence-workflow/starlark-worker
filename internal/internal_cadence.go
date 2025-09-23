@@ -56,6 +56,11 @@ type cadenceSettable struct {
 	s cad.Settable
 }
 
+// cadenceSelector implements Selector interface
+type cadenceSelector struct {
+	s cad.Selector
+}
+
 // CadenceWorker implements Worker interface
 type CadenceWorker struct {
 	Worker cadworker.Worker
@@ -332,6 +337,25 @@ func (w CadenceWorkflow) Now(ctx Context) time.Time {
 // Sleep pauses the Cadence workflow for a specified duration.
 func (w CadenceWorkflow) Sleep(ctx Context, d time.Duration) (err error) {
 	return cad.Sleep(ctx.(cad.Context), d)
+}
+
+// NewSelector creates a new selector for deterministic workflow operations.
+func (w CadenceWorkflow) NewSelector(ctx Context) Selector {
+	s := cad.NewSelector(ctx.(cad.Context))
+	return &cadenceSelector{s: s}
+}
+
+// AddFuture adds a future case to the selector.
+func (s *cadenceSelector) AddFuture(future Future, f func(f Future)) Selector {
+	s.s.AddFuture(future.(*cadenceFuture).f, func(fut cad.Future) {
+		f(&cadenceFuture{f: fut})
+	})
+	return s
+}
+
+// Select executes the selector and waits for one of the cases to be ready.
+func (s *cadenceSelector) Select(ctx Context) {
+	s.s.Select(ctx.(cad.Context))
 }
 
 // NewInterface creates a new Cadence workflow service client interface.

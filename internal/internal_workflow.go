@@ -30,4 +30,5 @@ type Workflow interface {
 	Sleep(ctx Context, d time.Duration) (err error)
 	IsCanceledError(ctx Context, err error) bool
 	WithRetryPolicy(ctx Context, retryPolicy RetryPolicy) Context
+	NewSelector(ctx Context) Selector
 }

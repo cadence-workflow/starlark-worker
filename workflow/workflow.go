@@ -179,6 +179,16 @@ type (
 	//
 	// Used extensively in graceful shutdowns, parent-child propagation, and timed operations.
 	CanceledError = internal.CanceledError
+
+	// Selector provides a deterministic alternative to Go's select statement in workflows.
+	// It allows waiting on multiple futures in a deterministic way.
+	//
+	// Usage:
+	//   selector := workflow.NewSelector(ctx)
+	//   selector.AddFuture(future1, func(f workflow.Future) { ... })
+	//   selector.AddFuture(future2, func(f workflow.Future) { ... })
+	//   selector.Select(ctx) // blocks until one future is ready
+	Selector = internal.Selector
 )
 
 func GetBackend(ctx Context) (Workflow, bool) {
@@ -297,6 +307,13 @@ func NewFuture(ctx Context) (Future, Settable) {
 		return backend.NewFuture(ctx)
 	}
 	return nil, nil
+}
+
+func NewSelector(ctx Context) Selector {
+	if backend, ok := GetBackend(ctx); ok {
+		return backend.NewSelector(ctx)
+	}
+	return nil
 }
 
 func Go(ctx Context, f func(ctx Context)) {

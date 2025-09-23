@@ -7,9 +7,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/starlark"
+	"go.uber.org/cadence"
 	"go.uber.org/cadence/encoded"
 	cadactivity "go.uber.org/cadence/activity"
 	cad "go.uber.org/cadence/workflow"
+	"go.uber.org/cadence/testsuite"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
@@ -207,6 +209,153 @@ func TestRegisterWorkflowWithOptions(t *testing.T) {
 		require.Equal(t, func1Type, func2Type)
 		require.Equal(t, reflect.TypeOf((*cad.Context)(nil)).Elem(), func1Type.In(0))
 		require.Equal(t, reflect.TypeOf((*cad.Context)(nil)).Elem(), func2Type.In(0))
+	})
+}
+
+// TestCadenceSelector tests the Selector functionality for Cadence workflows.
+func TestCadenceSelector(t *testing.T) {
+	workflow := &CadenceWorkflow{}
+
+	t.Run("NewSelector", func(t *testing.T) {
+		// Create a test workflow context using the test suite
+		s := &testsuite.WorkflowTestSuite{}
+		env := s.NewTestWorkflowEnvironment()
+
+		env.ExecuteWorkflow(func(ctx cad.Context) error {
+			// Test creating a new selector
+			selector := workflow.NewSelector(ctx)
+			require.NotNil(t, selector)
+
+			// Verify it's the right type
+			cadSelector, ok := selector.(*cadenceSelector)
+			require.True(t, ok)
+			require.NotNil(t, cadSelector.s)
+
+			return nil
+		})
+
+		require.True(t, env.IsWorkflowCompleted())
+		require.NoError(t, env.GetWorkflowError())
+	})
+
+	t.Run("AddFuture", func(t *testing.T) {
+		s := &testsuite.WorkflowTestSuite{}
+		env := s.NewTestWorkflowEnvironment()
+
+		env.ExecuteWorkflow(func(ctx cad.Context) error {
+			// Create selector and future
+			selector := workflow.NewSelector(ctx)
+			future, settable := workflow.NewFuture(ctx)
+
+			// Track if callback was called
+			callbackCalled := false
+			var receivedResult string
+
+			// Add future to selector
+			result := selector.AddFuture(future, func(f Future) {
+				callbackCalled = true
+				err := f.Get(ctx, &receivedResult)
+				require.NoError(t, err)
+			})
+
+			// Verify fluent interface
+			require.Equal(t, selector, result)
+
+			// Set the future value
+			settable.SetValue("test-result")
+
+			// Execute selector
+			selector.Select(ctx)
+
+			// Verify callback was called and result received
+			require.True(t, callbackCalled)
+			require.Equal(t, "test-result", receivedResult)
+
+			return nil
+		})
+
+		require.True(t, env.IsWorkflowCompleted())
+		require.NoError(t, env.GetWorkflowError())
+	})
+
+	t.Run("MultipleFutures", func(t *testing.T) {
+		s := &testsuite.WorkflowTestSuite{}
+		env := s.NewTestWorkflowEnvironment()
+
+		env.ExecuteWorkflow(func(ctx cad.Context) error {
+			selector := workflow.NewSelector(ctx)
+
+			// Create multiple futures
+			future1, settable1 := workflow.NewFuture(ctx)
+			future2, _ := workflow.NewFuture(ctx)
+
+			var result1, result2 string
+			future1Called := false
+			future2Called := false
+
+			// Add both futures to selector
+			selector.AddFuture(future1, func(f Future) {
+				future1Called = true
+				err := f.Get(ctx, &result1)
+				require.NoError(t, err)
+			})
+
+			selector.AddFuture(future2, func(f Future) {
+				future2Called = true
+				err := f.Get(ctx, &result2)
+				require.NoError(t, err)
+			})
+
+			// Set only the first future (simulating first activity completing)
+			settable1.SetValue("first-result")
+
+			// Execute selector - should only call first callback
+			selector.Select(ctx)
+
+			// Verify only first callback was called
+			require.True(t, future1Called)
+			require.False(t, future2Called)
+			require.Equal(t, "first-result", result1)
+			require.Empty(t, result2)
+
+			return nil
+		})
+
+		require.True(t, env.IsWorkflowCompleted())
+		require.NoError(t, env.GetWorkflowError())
+	})
+
+	t.Run("SelectorWithError", func(t *testing.T) {
+		s := &testsuite.WorkflowTestSuite{}
+		env := s.NewTestWorkflowEnvironment()
+
+		env.ExecuteWorkflow(func(ctx cad.Context) error {
+			selector := workflow.NewSelector(ctx)
+			future, settable := workflow.NewFuture(ctx)
+
+			var receivedError error
+
+			selector.AddFuture(future, func(f Future) {
+				var result string
+				receivedError = f.Get(ctx, &result)
+			})
+
+			// Set an error on the future
+			expectedError := cadence.NewCustomError("test-error", "test details")
+			settable.SetError(expectedError)
+
+			// Execute selector
+			selector.Select(ctx)
+
+			// Verify error was received
+			require.Error(t, receivedError)
+			require.Contains(t, receivedError.Error(), "test-error")
+
+			return nil
+		})
+
+		require.True(t, env.IsWorkflowCompleted())
+		require.NoError(t, env.GetWorkflowError())
 	})
 }
 
