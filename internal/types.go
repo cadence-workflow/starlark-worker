@@ -217,3 +217,10 @@ type IInfo interface {
 	ExecutionID() string
 	RunID() string
 }
+
+// Selector provides a deterministic alternative to Go's select statement in workflows.
+// It allows waiting on multiple futures in a deterministic way.
+type Selector interface {
+	AddFuture(future Future, f func(f Future)) Selector
+	Select(ctx Context)
+}
