@@ -12,7 +12,7 @@ require (
 	go.temporal.io/api v1.46.0
 	go.temporal.io/sdk v1.33.0
 	go.temporal.io/sdk/contrib/tally v0.2.0
-	go.uber.org/cadence v1.2.9
+	go.uber.org/cadence v1.3.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/yarpc v1.75.2
 	go.uber.org/zap v1.27.0
@@ -35,6 +35,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.22.0 // indirect
+	github.com/jonboulle/clockwork v0.4.0 // indirect
 	github.com/marusama/semaphore/v2 v2.5.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
