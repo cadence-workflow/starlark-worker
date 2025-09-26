@@ -6,8 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"reflect"
+	"time"
+
 	"github.com/cadence-workflow/starlark-worker/encoded"
 	"github.com/cadence-workflow/starlark-worker/ext"
+	tempinternal "github.com/cadence-workflow/starlark-worker/internal/temporalbatch"
 	"github.com/cadence-workflow/starlark-worker/star"
 	jsoniter "github.com/json-iterator/go"
 	"go.starlark.net/starlark"
@@ -20,9 +25,6 @@ import (
 	tmpworker "go.temporal.io/sdk/worker"
 	temp "go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
-	"io"
-	"reflect"
-	"time"
 )
 
 // Workflow checks that TemporalWorkflow implements the Workflow interface.
@@ -59,6 +61,11 @@ type temporalFuture struct {
 	f temp.Future
 }
 
+// temporalBatchFuture implements BatchFuture interface
+type temporalBatchFuture struct {
+	bf tempinternal.BatchFuture
+}
+
 // temporalChildWorkflowFuture is a wrapper around the Temporal SDK child workflow future interface.
 type temporalChildWorkflowFuture struct {
 	cf temp.ChildWorkflowFuture
@@ -87,6 +94,25 @@ func (f *temporalFuture) Get(ctx Context, valPtr interface{}) error {
 // IsReady checks if the future is ready.
 func (f *temporalFuture) IsReady() bool {
 	return f.f.IsReady()
+}
+
+// Get acts like Future.Get, but it reads out all wrapped futures into the provided slice pointer.
+func (bf *temporalBatchFuture) Get(ctx Context, valPtr interface{}) error {
+	return bf.bf.Get(ctx.(temp.Context), valPtr)
+}
+
+// IsReady returns true when all wrapped futures return true from their IsReady
+func (bf *temporalBatchFuture) IsReady() bool {
+	return bf.bf.IsReady()
+}
+
+// GetFutures returns a slice of all the wrapped futures.
+func (bf *temporalBatchFuture) GetFutures() []Future {
+	futures := make([]Future, len(bf.bf.GetFutures()))
+	for i, f := range bf.bf.GetFutures() {
+		futures[i] = &temporalFuture{f: f}
+	}
+	return futures
 }
 
 // RegisterWorkflow registers a workflow with the Temporal worker.
@@ -355,6 +381,21 @@ func (w TemporalWorkflow) NewCustomError(reason string, details ...interface{}) 
 func (w TemporalWorkflow) NewFuture(ctx Context) (Future, Settable) {
 	f, s := temp.NewFuture(ctx.(temp.Context))
 	return &temporalFuture{f: f}, &temporalSettable{s: s}
+}
+
+// NewBatchFuture creates a new batch future for the Cadence workflow.
+func (w TemporalWorkflow) NewBatchFuture(ctx Context, batchSize int, factories []func(ctx Context) Future) (BatchFuture, error) {
+	// Cast the workflow factories to temporal factories
+	temporalFactories := make([]func(ctx temp.Context) temp.Future, len(factories))
+	for i, factory := range factories {
+		temporalFactories[i] = func(cadCtx temp.Context) temp.Future {
+			future := factory(cadCtx)
+			// Convert the returned Future to cad.Future
+			return future.(*temporalFuture).f
+		}
+	}
+	batchFuture, err := tempinternal.NewBatchFuture(ctx.(temp.Context), batchSize, temporalFactories)
+	return &temporalBatchFuture{bf: batchFuture}, err
 }
 
 func (w TemporalWorkflow) SideEffect(ctx Context, f func(ctx Context) interface{}) encoded.Value {

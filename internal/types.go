@@ -213,6 +213,16 @@ type Future interface {
 	IsReady() bool
 }
 
+type BatchFuture interface {
+	// IsReady returns true when all wrapped futures return true from their IsReady
+	IsReady() bool
+	// Get acts like workflow.Future.Get, but it reads out all wrapped futures into the provided slice pointer.
+	Get(ctx Context, valuePtr interface{}) error
+	// GetFutures returns a slice of all the wrapped futures.
+	// This slice MUST NOT be modified, but the individual futures can be used normally.
+	GetFutures() []Future
+}
+
 type IInfo interface {
 	ExecutionID() string
 	RunID() string
