@@ -21,7 +21,7 @@ import (
 type BackendType string
 
 const (
-	ServiceWorkflowFunc             = "starlark-worklow"
+	ServiceWorkflowFunc             = "starlark-workflow"
 	CadenceBackend      BackendType = "cadence"
 	TemporalBackend     BackendType = "temporal"
 )
