@@ -2,9 +2,10 @@ package internal
 
 import (
 	"context"
+	"time"
+
 	"github.com/cadence-workflow/starlark-worker/encoded"
 	"go.uber.org/zap"
-	"time"
 )
 
 type Workflow interface {
@@ -24,6 +25,7 @@ type Workflow interface {
 	ExecuteChildWorkflow(ctx Context, childWorkflow interface{}, args ...interface{}) ChildWorkflowFuture
 	NewCustomError(reason string, details ...interface{}) CustomError
 	NewFuture(ctx Context) (Future, Settable)
+	NewBatchFuture(ctx Context, batchSize int, factories []func(ctx Context) Future) (BatchFuture, error)
 	Go(ctx Context, f func(ctx Context))
 	SideEffect(ctx Context, f func(ctx Context) interface{}) encoded.Value
 	Now(ctx Context) time.Time
