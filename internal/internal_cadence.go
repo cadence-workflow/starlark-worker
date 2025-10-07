@@ -5,6 +5,12 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
+	"log"
+	"net/url"
+	"reflect"
+	"time"
+
 	"github.com/cadence-workflow/starlark-worker/encoded"
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/star"
@@ -15,16 +21,12 @@ import (
 	cadactivity "go.uber.org/cadence/activity"
 	cadworker "go.uber.org/cadence/worker"
 	cad "go.uber.org/cadence/workflow"
+	cadx "go.uber.org/cadence/x"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
 	"go.uber.org/yarpc/transport/tchannel"
 	"go.uber.org/zap"
-	"io"
-	"log"
-	"net/url"
-	"reflect"
-	"time"
 )
 
 // CadenceWorkflow implements Workflow interface for Cadence.
@@ -44,6 +46,11 @@ type cadenceWorkflowInfo struct {
 // cadenceFuture implements Future interface
 type cadenceFuture struct {
 	f cad.Future
+}
+
+// cadenceBatchFuture implements BatchFuture interface
+type cadenceBatchFuture struct {
+	bf cadx.BatchFuture
 }
 
 // cadenceChildWorkflowFuture implements ChildWorkflowFuture interface
@@ -140,6 +147,25 @@ func (f *cadenceFuture) Get(ctx Context, valPtr interface{}) error {
 // IsReady checks if the cadence future is ready.
 func (f *cadenceFuture) IsReady() bool {
 	return f.f.IsReady()
+}
+
+// Get acts like Future.Get, but it reads out all wrapped futures into the provided slice pointer.
+func (bf *cadenceBatchFuture) Get(ctx Context, valPtr interface{}) error {
+	return bf.bf.Get(ctx.(cad.Context), valPtr)
+}
+
+// IsReady returns true when all wrapped futures return true from their IsReady
+func (bf *cadenceBatchFuture) IsReady() bool {
+	return bf.bf.IsReady()
+}
+
+// GetFutures returns a slice of all the wrapped futures.
+func (bf *cadenceBatchFuture) GetFutures() []Future {
+	futures := make([]Future, len(bf.bf.GetFutures()))
+	for i, f := range bf.bf.GetFutures() {
+		futures[i] = &cadenceFuture{f: f}
+	}
+	return futures
 }
 
 // Get gets the value of the cadence future.
@@ -313,6 +339,21 @@ func (w CadenceWorkflow) NewCustomError(reason string, details ...interface{}) C
 func (w CadenceWorkflow) NewFuture(ctx Context) (Future, Settable) {
 	f, s := cad.NewFuture(ctx.(cad.Context))
 	return &cadenceFuture{f: f}, &cadenceSettable{s: s}
+}
+
+// NewBatchFuture creates a new batch future for the Cadence workflow.
+func (w CadenceWorkflow) NewBatchFuture(ctx Context, batchSize int, factories []func(ctx Context) Future) (BatchFuture, error) {
+	// Cast the workflow factories to cadence factories
+	cadenceFactories := make([]func(ctx cad.Context) cad.Future, len(factories))
+	for i, factory := range factories {
+		cadenceFactories[i] = func(cadCtx cad.Context) cad.Future {
+			future := factory(cadCtx)
+			// Convert the returned Future to cad.Future
+			return future.(*cadenceFuture).f
+		}
+	}
+	batchFuture, err := cadx.NewBatchFuture(ctx.(cad.Context), batchSize, cadenceFactories)
+	return &cadenceBatchFuture{bf: batchFuture}, err
 }
 
 // Go executes a function in the Cadence workflow context.

@@ -1,10 +1,11 @@
 package workflow
 
 import (
+	"time"
+
 	"github.com/cadence-workflow/starlark-worker/encoded"
 	"github.com/cadence-workflow/starlark-worker/internal"
 	"go.uber.org/zap"
-	"time"
 )
 
 var BackendContextKey = "BackendContextKey"
@@ -103,6 +104,16 @@ type (
 	//   var result string
 	//   err := future.Get(ctx, &result)
 	Future = internal.Future
+
+	// BatchFuture is an abstraction over multiple futures in workflows.
+	// Returned from:
+	// - NewBatchFuture
+	//
+	// Provides methods:
+	// - IsReady() – non-blocking completion check
+	// - Get(ctx, &result) – blocks until complete
+	// - GetFutures() – returns all wrapped futures
+	BatchFuture = internal.BatchFuture
 
 	// ChildWorkflowOptions configures execution of a child workflow.
 	// Includes options like:
@@ -305,6 +316,13 @@ func NewCustomError(ctx Context, reason string, details ...interface{}) CustomEr
 func NewFuture(ctx Context) (Future, Settable) {
 	if backend, ok := GetBackend(ctx); ok {
 		return backend.NewFuture(ctx)
+	}
+	return nil, nil
+}
+
+func NewBatchFuture(ctx Context, batchSize int, factories []func(ctx Context) Future) (BatchFuture, error) {
+	if backend, ok := GetBackend(ctx); ok {
+		return backend.NewBatchFuture(ctx, batchSize, factories)
 	}
 	return nil, nil
 }
