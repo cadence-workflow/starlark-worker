@@ -3,20 +3,21 @@ package cadence_client
 import (
 	"context"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/star"
-	"go.starlark.net/starlark"
-	enumspb "go.temporal.io/api/enums/v1"
-	tempclient "go.temporal.io/sdk/client"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/cadence-workflow/starlark-worker/ext"
+	"github.com/cadence-workflow/starlark-worker/star"
+	"go.starlark.net/starlark"
+	enumspb "go.temporal.io/api/enums/v1"
+	tempclient "go.temporal.io/sdk/client"
 )
 
-var WorkflowFunc = "starlark-worklow"
+var WorkflowFunc = "starlark-workflow"
 
 func Run(
 	tar []byte,

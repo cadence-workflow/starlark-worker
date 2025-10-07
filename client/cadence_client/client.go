@@ -3,21 +3,22 @@ package cadence_client
 import (
 	"context"
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/ext"
-	"github.com/cadence-workflow/starlark-worker/star"
-	"go.starlark.net/starlark"
-	cadenceshared "go.uber.org/cadence/.gen/go/shared"
-	cadenceclient "go.uber.org/cadence/client"
-	"go.uber.org/cadence/workflow"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/cadence-workflow/starlark-worker/ext"
+	"github.com/cadence-workflow/starlark-worker/star"
+	"go.starlark.net/starlark"
+	cadenceshared "go.uber.org/cadence/.gen/go/shared"
+	cadenceclient "go.uber.org/cadence/client"
+	"go.uber.org/cadence/workflow"
 )
 
-var WorkflowFunc = "starlark-worklow"
+var WorkflowFunc = "starlark-workflow"
 
 func Run(
 	tar []byte,
