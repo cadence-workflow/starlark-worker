@@ -2,7 +2,9 @@
 
 This doc is intended for contributors to Starlark Worker. Thanks for considering to contribute ❤️
 
-Feel free to join our [slack workspace](http://t.uber.com/cadence-slack) to reach out and discuss issues with the team.
+For more information on contributing to Cadence projects, see our [Contributing Guide](https://github.com/cadence-workflow/cadence/blob/master/CONTRIBUTING.md).
+
+Feel free to join our [CNCF Slack channel](https://join.slack.com/t/uber-cadence/shared_invite/enQtNDczNTgxMjYxNDEzLTQyYjcxZDM2YTIxMTZkMzQ0NjgxYmI3OWY5ODhiOTliM2I5MzA4NWM4MjU4YmNhNGM3ZDEwMWM5MmI4MmQyYzU) to reach out and discuss issues with the team.
 
 :warning: Note:
 >All contributors need to fill out the [Uber Contributor License Agreement](http://t.uber.com/cla) before we can merge in any of your changes
