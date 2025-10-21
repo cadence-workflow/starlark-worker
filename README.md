@@ -40,3 +40,9 @@ This section is intended for contributors. Below are the instructions for settin
 
 5. **Modify and re-run the test workflow**:
    Make changes to the [testdata/ping.star](./testdata/ping.star) file and run the workflow again. The changes will take effect immediately without needing to restart the worker.
+
+## Contributing
+
+We'd love to have you contribute! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for more information. For general guidance on contributing to Cadence projects, check out our [Contributing Guide](https://github.com/cadence-workflow/cadence/blob/master/CONTRIBUTING.md).
+
+Join us on [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) to discuss and ask questions.
