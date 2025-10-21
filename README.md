@@ -45,4 +45,4 @@ This section is intended for contributors. Below are the instructions for settin
 
 We'd love to have you contribute! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for more information. For general guidance on contributing to Cadence projects, check out our [Contributing Guide](https://github.com/cadence-workflow/cadence/blob/master/CONTRIBUTING.md).
 
-Join us on [CNCF Slack](https://join.slack.com/t/uber-cadence/shared_invite/enQtNDczNTgxMjYxNDEzLTQyYjcxZDM2YTIxMTZkMzQ0NjgxYmI3OWY5ODhiOTliM2I5MzA4NWM4MjU4YmNhNGM3ZDEwMWM5MmI4MmQyYzU) to discuss and ask questions.
+Join us on [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) to discuss and ask questions.
