@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/google/uuid v1.6.0
 	github.com/json-iterator/go v1.1.12
+	github.com/nexus-rpc/sdk-go v0.3.0
 	github.com/stretchr/testify v1.10.0
 	github.com/uber-go/tally v3.5.8+incompatible
 	github.com/uber-go/tally/v4 v4.1.1
@@ -12,7 +13,7 @@ require (
 	go.temporal.io/api v1.46.0
 	go.temporal.io/sdk v1.33.0
 	go.temporal.io/sdk/contrib/tally v0.2.0
-	go.uber.org/cadence v1.3.0
+	go.uber.org/cadence v1.3.1-rc.11
 	go.uber.org/multierr v1.11.0
 	go.uber.org/yarpc v1.75.2
 	go.uber.org/zap v1.27.0
@@ -26,7 +27,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a // indirect
-	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogo/googleapis v1.4.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gogo/status v1.1.0 // indirect
@@ -40,7 +40,6 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/nexus-rpc/sdk-go v0.3.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -49,14 +48,10 @@ require (
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
-	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/tklauser/go-sysconf v0.3.11 // indirect
-	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/uber-go/mapdecode v1.0.0 // indirect
 	github.com/uber/tchannel-go v1.34.4 // indirect
-	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/net/metrics v1.4.0 // indirect
 	go.uber.org/thriftrw v1.32.0 // indirect

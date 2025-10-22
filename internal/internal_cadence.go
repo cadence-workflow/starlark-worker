@@ -21,7 +21,6 @@ import (
 	cadactivity "go.uber.org/cadence/activity"
 	cadworker "go.uber.org/cadence/worker"
 	cad "go.uber.org/cadence/workflow"
-	cadx "go.uber.org/cadence/x"
 	"go.uber.org/yarpc"
 	"go.uber.org/yarpc/api/transport"
 	"go.uber.org/yarpc/transport/grpc"
@@ -50,7 +49,7 @@ type cadenceFuture struct {
 
 // cadenceBatchFuture implements BatchFuture interface
 type cadenceBatchFuture struct {
-	bf cadx.BatchFuture
+	bf cad.BatchFuture
 }
 
 // cadenceChildWorkflowFuture implements ChildWorkflowFuture interface
@@ -352,7 +351,7 @@ func (w CadenceWorkflow) NewBatchFuture(ctx Context, batchSize int, factories []
 			return future.(*cadenceFuture).f
 		}
 	}
-	batchFuture, err := cadx.NewBatchFuture(ctx.(cad.Context), batchSize, cadenceFactories)
+	batchFuture, err := cad.NewBatchFuture(ctx.(cad.Context), batchSize, cadenceFactories)
 	return &cadenceBatchFuture{bf: batchFuture}, err
 }
 
