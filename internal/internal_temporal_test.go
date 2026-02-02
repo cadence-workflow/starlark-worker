@@ -49,7 +49,7 @@ func TestTemporalToData(t *testing.T) {
 	})
 
 	t.Run("encode-several-values", func(t *testing.T) {
-		// Assert the encoder can encode several values using the cadenceDelimiter.
+		// Assert the encoder can encode several values using the delimiter.
 		data, err := converter.ToData(
 			starlark.Tuple{starlark.String("pi"), starlark.Float(3.14)},
 			true,
@@ -84,8 +84,8 @@ func TestTemporalFromData(t *testing.T) {
 		require.Equal(t, TemporalTestStruct{ID: 101}, out)
 	})
 
-	t.Run("decode-no-cadenceDelimiter", func(t *testing.T) {
-		// Assert the encoder can handle the case when the cadenceDelimiter is missing in the end.
+	t.Run("decode-no-delimiter", func(t *testing.T) {
+		// Assert the encoder can handle the case when the delimiter is missing in the end.
 		var out TemporalTestStruct
 		require.NoError(t, converter.FromData([]byte("{\"id\":101}"), &out))
 		require.Equal(t, TemporalTestStruct{ID: 101}, out)
@@ -111,9 +111,9 @@ func TestTemporalFromData(t *testing.T) {
 	})
 }
 
-func newTemporalTestConverter(t *testing.T) *TemporalDataConverter {
+func newTemporalTestConverter(t *testing.T) encoded.DataConverter {
 	logger := zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel))
-	return &TemporalDataConverter{Logger: logger}
+	return &CadenceDataConverter{Logger: logger}
 }
 
 // TestRegisterWorkflowWithOptions tests that the TemporalWorker can register workflows with options.
@@ -229,12 +229,13 @@ func (m *mockTemporalWorker) RegisterWorkflowWithOptions(wf interface{}, options
 }
 
 func (m *mockTemporalWorker) RegisterWorkflow(wf interface{}) {}
-func (m *mockTemporalWorker) RegisterActivity(a interface{}) {}
-func (m *mockTemporalWorker) RegisterActivityWithOptions(runFunc interface{}, options activity.RegisterOptions) {}
+func (m *mockTemporalWorker) RegisterActivity(a interface{})  {}
+func (m *mockTemporalWorker) RegisterActivityWithOptions(runFunc interface{}, options activity.RegisterOptions) {
+}
 func (m *mockTemporalWorker) RegisterNexusService(service *nexus.Service) {}
-func (m *mockTemporalWorker) Start() error { return nil }
-func (m *mockTemporalWorker) Run(interruptCh <-chan interface{}) error { return nil }
-func (m *mockTemporalWorker) Stop() {}
+func (m *mockTemporalWorker) Start() error                                { return nil }
+func (m *mockTemporalWorker) Run(interruptCh <-chan interface{}) error    { return nil }
+func (m *mockTemporalWorker) Stop()                                       {}
 
 // TestTemporalRegisterWorkflowWithOptions tests that RegisterWorkflowWithOptions properly transforms the workflow function
 func TestTemporalRegisterWorkflowWithOptions(t *testing.T) {
@@ -460,5 +461,5 @@ func (m *mockTemporalContext) Value(key interface{}) interface{} { return nil }
 
 // Implement temp.Context interface methods (extends context.Context)
 func (m *mockTemporalContext) Deadline() (time.Time, bool) { return time.Time{}, false }
-func (m *mockTemporalContext) Done() <-chan struct{} { return nil }
-func (m *mockTemporalContext) Err() error { return nil }
+func (m *mockTemporalContext) Done() <-chan struct{}       { return nil }
+func (m *mockTemporalContext) Err() error                  { return nil }
