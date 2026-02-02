@@ -1,0 +1,25 @@
+
+*.out
+*.test
+*.xml
+*.swp
+.vscode/
+*.code-workspace
+*.iml
+*.cov
+*.html
+.tmp/
+/vendor
+test.log
+/dummy
+.build
+.bins
+.bin
+.DS_Store
+.gobincache
+
+# most idea stuff is local-machine specific...
+.idea/*
+# ...but this scopes folder is intended to be shared
+!.idea/scopes
+!.idea/scopes/*

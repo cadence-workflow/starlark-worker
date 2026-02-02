@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go test:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git rebase:*)",
+      "Bash(find:*)",
+      "Bash(brew install:*)",
+      "Bash(pip install:*)",
+      "Bash(pipx install:*)",
+      "Bash(go build:*)",
+      "Bash(ls:*)",
+      "Bash(xargs cat:*)",
+      "Bash(grep:*)",
+      "Bash(go mod tidy:*)",
+      "Bash(protoc:*)",
+      "Bash(go doc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": []
+  }
+}

@@ -225,7 +225,48 @@ func (w TemporalWorkflow) GetActivityLogger(ctx context.Context) *zap.Logger {
 	return zap.NewNop()
 }
 
-// GetActivityInfo is implemented in the Workflow interface to return the logger for the Temporal activity.
+// GetActivityInfo retrieves comprehensive information about the currently executing Temporal activity.
+// This method is implemented as part of the Workflow interface to provide unified access to activity
+// metadata across different workflow engines (Cadence and Temporal).
+//
+// Parameters:
+//   - ctx: The activity context from which to extract information. Must be a valid Temporal activity context.
+//
+// Returns:
+//   - ActivityInfo: A unified structure containing activity execution details including:
+//     * TaskToken: Opaque token that identifies the activity task for completion/heartbeat operations
+//     * WorkflowDomain: The Temporal namespace where the parent workflow is executing (mapped from WorkflowNamespace)
+//     * WorkflowExecution: ID and RunID of the parent workflow that scheduled this activity
+//     * ActivityID: Business-level identifier for this specific activity execution
+//     * ActivityType: Name information about the activity function being executed (Temporal doesn't provide Path)
+//     * TaskList: The task queue this activity was scheduled on (mapped from TaskQueue)
+//     * HeartbeatTimeout: Maximum interval between heartbeats (0 means no heartbeat required)
+//     * ScheduledTimestamp: When the activity was scheduled by the workflow (mapped from ScheduledTime)
+//     * StartedTimestamp: When the activity actually started executing (mapped from StartedTime)
+//     * Deadline: Absolute deadline for activity completion
+//     * Attempt: Current retry attempt number (starts from 0, increments on retries)
+//     * WorkflowType: Information about the parent workflow type (optional, may be nil, no Path in Temporal)
+//
+// This method converts Temporal-specific activity information into a unified format that can be
+// used consistently across both Cadence and Temporal implementations, enabling portable activity code.
+// Note that some fields are adapted to match the unified interface:
+//   - WorkflowNamespace -> WorkflowDomain
+//   - TaskQueue -> TaskList
+//   - ScheduledTime -> ScheduledTimestamp
+//   - StartedTime -> StartedTimestamp
+//   - ActivityType.Path is not available in Temporal
+//
+// Example usage within an activity:
+//   func MyActivity(ctx context.Context, input string) (string, error) {
+//     workflow := TemporalWorkflow{}
+//     info := workflow.GetActivityInfo(ctx)
+//     logger.Info("Activity executing",
+//       "activityID", info.ActivityID,
+//       "attempt", info.Attempt,
+//       "workflowID", info.WorkflowExecution.ID,
+//       "namespace", info.WorkflowDomain)
+//     // ... activity logic
+//   }
 func (w TemporalWorkflow) GetActivityInfo(ctx context.Context) ActivityInfo {
 	info := tempactivity.GetInfo(ctx)
 	activityInfo := ActivityInfo{
