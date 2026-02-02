@@ -212,6 +212,37 @@ func (w CadenceWorkflow) GetActivityLogger(ctx context.Context) *zap.Logger {
 	return cadactivity.GetLogger(ctx)
 }
 
+// GetActivityInfo is implemented in the Workflow interface to return the logger for the Cadence activity.
+func (w CadenceWorkflow) GetActivityInfo(ctx context.Context) ActivityInfo {
+	info := cadactivity.GetInfo(ctx)
+	activityInfo := ActivityInfo{
+		TaskToken:      info.TaskToken,
+		WorkflowDomain: info.WorkflowDomain,
+		WorkflowExecution: WorkflowExecution{
+			ID:    info.WorkflowExecution.ID,
+			RunID: info.WorkflowExecution.RunID,
+		},
+		ActivityID: info.ActivityID,
+		ActivityType: ActivityType{
+			Name: info.ActivityType.Name,
+			Path: info.ActivityType.Path,
+		},
+		TaskList:           info.TaskList,
+		HeartbeatTimeout:   info.HeartbeatTimeout,
+		ScheduledTimestamp: info.ScheduledTimestamp,
+		StartedTimestamp:   info.StartedTimestamp,
+		Deadline:           info.Deadline,
+		Attempt:            info.Attempt,
+	}
+	if info.WorkflowType != nil {
+		activityInfo.WorkflowType = &WorkflowType{
+			Name: info.WorkflowType.Name,
+			Path: info.WorkflowType.Path,
+		}
+	}
+	return activityInfo
+}
+
 // GetActivityInfo returns the activity info for the Cadence workflow.
 func (w CadenceWorkflow) GetInfo(ctx Context) IInfo {
 	return &cadenceWorkflowInfo{

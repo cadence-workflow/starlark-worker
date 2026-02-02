@@ -225,6 +225,35 @@ func (w TemporalWorkflow) GetActivityLogger(ctx context.Context) *zap.Logger {
 	return zap.NewNop()
 }
 
+// GetActivityInfo is implemented in the Workflow interface to return the logger for the Temporal activity.
+func (w TemporalWorkflow) GetActivityInfo(ctx context.Context) ActivityInfo {
+	info := tempactivity.GetInfo(ctx)
+	activityInfo := ActivityInfo{
+		TaskToken:      info.TaskToken,
+		WorkflowDomain: info.WorkflowNamespace,
+		WorkflowExecution: WorkflowExecution{
+			ID:    info.WorkflowExecution.ID,
+			RunID: info.WorkflowExecution.RunID,
+		},
+		ActivityID: info.ActivityID,
+		ActivityType: ActivityType{
+			Name: info.ActivityType.Name,
+		},
+		TaskList:           info.TaskQueue,
+		HeartbeatTimeout:   info.HeartbeatTimeout,
+		ScheduledTimestamp: info.ScheduledTime,
+		StartedTimestamp:   info.StartedTime,
+		Deadline:           info.Deadline,
+		Attempt:            info.Attempt,
+	}
+	if info.WorkflowType != nil {
+		activityInfo.WorkflowType = &WorkflowType{
+			Name: info.WorkflowType.Name,
+		}
+	}
+	return activityInfo
+}
+
 func (w TemporalWorkflow) GetInfo(ctx Context) IInfo {
 	return &tempWorkflowInfo{
 		context: ctx.(temp.Context),

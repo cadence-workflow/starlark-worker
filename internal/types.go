@@ -234,3 +234,36 @@ type Selector interface {
 	AddFuture(future Future, f func(f Future)) Selector
 	Select(ctx Context)
 }
+
+
+type ActivityInfo struct {
+	TaskToken          []byte
+	WorkflowType       *WorkflowType
+	WorkflowDomain     string
+	WorkflowExecution  WorkflowExecution
+	ActivityID         string
+	ActivityType       ActivityType
+	TaskList           string
+	HeartbeatTimeout   time.Duration // Maximum time between heartbeats. 0 means no heartbeat needed.
+	ScheduledTimestamp time.Time     // Time of activity scheduled by a workflow
+	StartedTimestamp   time.Time     // Time of activity start
+	Deadline           time.Time     // Time of activity timeout
+	Attempt            int32         // Attempt starts from 0, and increased by 1 for every retry if retry policy is specified.
+}
+
+type WorkflowType struct {
+	Name string
+	Path string
+}
+
+// WorkflowExecution Details.
+type WorkflowExecution struct {
+	ID    string
+	RunID string
+}
+
+// ActivityType identifies a activity type.
+type ActivityType struct {
+	Name string
+	Path string
+}
