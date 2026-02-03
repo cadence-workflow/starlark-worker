@@ -2,10 +2,10 @@ package progress
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/workflow"
 
 	"github.com/cadence-workflow/starlark-worker/service"
 	"github.com/cadence-workflow/starlark-worker/star"
+	"github.com/cadence-workflow/starlark-worker/workflow"
 	"go.starlark.net/starlark"
 	"go.uber.org/zap"
 )
@@ -23,13 +23,13 @@ func (f *Module) Attr(n string) (starlark.Value, error) { return star.Attr(f, n,
 func (f *Module) AttrNames() []string                   { return star.AttrNames(builtins, properties) }
 
 const (
-	_taskProgressQueryHandlerKey = "task_progress"
-	_taskStatePending            = "PENDING"
-	_taskStateRunning            = "RUNNING"
-	_taskStateSucceeded          = "SUCCEEDED"
-	_taskStateFailed             = "FAILED"
-	_taskStateKilled             = "KILLED"
-	_taskStateSkipped            = "SKIPPED"
+	TaskProgressQueryHandlerKey = "task_progress"
+	TaskStatePending            = "PENDING"
+	TaskStateRunning            = "RUNNING"
+	TaskStateSucceeded          = "SUCCEEDED"
+	TaskStateFailed             = "FAILED"
+	TaskStateKilled             = "KILLED"
+	TaskStateSkipped            = "SKIPPED"
 )
 
 var builtins = map[string]*starlark.Builtin{
@@ -45,6 +45,16 @@ var properties = map[string]star.PropertyFactory{
 	"task_state_skipped":   _getSkippedState,
 }
 
+// Report reports a progress string from Go code
+func Report(ctx workflow.Context, progressStr string) error {
+	logger := workflow.GetLogger(ctx)
+	logger.Info(TaskProgressQueryHandlerKey, zap.String("msg", progressStr))
+	progress := service.GetProgress(ctx)
+	// Note that this push back is not thread-safe
+	progress.PushBack(progressStr)
+	return nil
+}
+
 func report(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 
 	// report(progress: str)
@@ -55,38 +65,38 @@ func report(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs
 
 	var progressStr starlark.String
 
-	if err := starlark.UnpackArgs("report", args, kwargs, _taskProgressQueryHandlerKey, &progressStr); err != nil {
+	if err := starlark.UnpackArgs("report", args, kwargs, TaskProgressQueryHandlerKey, &progressStr); err != nil {
 		logger.Error("error", zap.Error(err))
 		return nil, err
 	}
 
-	logger.Info(_taskProgressQueryHandlerKey, zap.String("msg", string(progressStr)))
+	logger.Info(TaskProgressQueryHandlerKey, zap.String("msg", string(progressStr)))
 	progress := service.GetProgress(ctx)
-	// Not that this push back is not thread-safe
+	// Note that this push back is not thread-safe
 	progress.PushBack(string(progressStr))
 	return starlark.None, nil
 }
 
 func _getPendingState(reciever starlark.Value) (starlark.Value, error) {
-	return starlark.String(_taskStatePending), nil
+	return starlark.String(TaskStatePending), nil
 }
 
 func _getRunningState(reciever starlark.Value) (starlark.Value, error) {
-	return starlark.String(_taskStateRunning), nil
+	return starlark.String(TaskStateRunning), nil
 }
 
 func _getSucceededState(reciever starlark.Value) (starlark.Value, error) {
-	return starlark.String(_taskStateSucceeded), nil
+	return starlark.String(TaskStateSucceeded), nil
 }
 
 func _getFailedState(reciever starlark.Value) (starlark.Value, error) {
-	return starlark.String(_taskStateFailed), nil
+	return starlark.String(TaskStateFailed), nil
 }
 
 func _getKilledState(reciever starlark.Value) (starlark.Value, error) {
-	return starlark.String(_taskStateKilled), nil
+	return starlark.String(TaskStateKilled), nil
 }
 
 func _getSkippedState(reciever starlark.Value) (starlark.Value, error) {
-	return starlark.String(_taskStateSkipped), nil
+	return starlark.String(TaskStateSkipped), nil
 }
