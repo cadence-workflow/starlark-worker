@@ -234,3 +234,100 @@ type Selector interface {
 	AddFuture(future Future, f func(f Future)) Selector
 	Select(ctx Context)
 }
+
+// ActivityInfo provides comprehensive metadata about an activity execution, unified across
+// both Cadence and Temporal workflow engines. This structure contains all the information
+// needed to understand the context and lifecycle of an activity execution.
+type ActivityInfo struct {
+	// TaskToken is an opaque binary token that uniquely identifies this activity task.
+	// It's used for activity completion, heartbeat reporting, and task routing within the workflow engine.
+	// This token should be included in all activity lifecycle operations (complete, fail, heartbeat).
+	TaskToken []byte
+
+	// WorkflowType contains information about the parent workflow that scheduled this activity.
+	// May be nil if workflow type information is not available.
+	// Includes both the workflow name and path (package information).
+	WorkflowType *WorkflowType
+
+	// WorkflowDomain specifies the domain/namespace where the parent workflow is executing.
+	// In Cadence: this is the domain name
+	// In Temporal: this is the namespace name (mapped to WorkflowDomain for consistency)
+	WorkflowDomain string
+
+	// WorkflowExecution contains the unique identifiers of the parent workflow instance
+	// that scheduled this activity. Includes both the workflow ID and run ID.
+	WorkflowExecution WorkflowExecution
+
+	// ActivityID is a business-level identifier for this specific activity execution.
+	// This can be used to identify and correlate activity executions, and is often
+	// used for activity deduplication and tracking purposes.
+	ActivityID string
+
+	// ActivityType contains information about the activity function being executed,
+	// including the activity name and optional path information.
+	ActivityType ActivityType
+
+	// TaskList specifies the task list (Cadence) or task queue (Temporal) where this activity was scheduled.
+	// This indicates which worker pool is responsible for executing this activity.
+	TaskList string
+
+	// HeartbeatTimeout specifies the maximum time allowed between activity heartbeats.
+	// If set to 0, no heartbeat is required for this activity.
+	// Activities should send heartbeats within this interval to indicate they're still alive and making progress.
+	HeartbeatTimeout time.Duration
+
+	// ScheduledTimestamp indicates when the activity was scheduled by the parent workflow.
+	// This represents the time the workflow decision was made to execute this activity.
+	ScheduledTimestamp time.Time
+
+	// StartedTimestamp indicates when the activity actually began executing on a worker.
+	// There may be a delay between ScheduledTimestamp and StartedTimestamp due to task list queuing.
+	StartedTimestamp time.Time
+
+	// Deadline specifies the absolute time when this activity execution will timeout.
+	// Activities must complete before this deadline or they will be considered failed.
+	Deadline time.Time
+
+	// Attempt indicates the current retry attempt number for this activity execution.
+	// Starts from 0 for the first attempt, and increments by 1 for each retry attempt
+	// when a retry policy is configured for the activity.
+	Attempt int32
+}
+
+// WorkflowType identifies a workflow type with both human-readable name and technical path information.
+// This structure provides metadata about workflow functions across different workflow engines.
+type WorkflowType struct {
+	// Name is the human-readable identifier for the workflow type.
+	// This is the name used when starting workflow executions and in workflow registration.
+	// Example: "ProcessOrderWorkflow", "user-onboarding", etc.
+	Name string
+
+	// Path contains the fully qualified path or package information for the workflow function.
+	// This provides technical details about where the workflow code is located.
+	// In Cadence: typically includes the full package path
+	// In Temporal: may not always be available (depends on implementation)
+	// Example: "github.com/myorg/workflows.ProcessOrderWorkflow"
+	Path string
+}
+
+// WorkflowExecution Details.
+type WorkflowExecution struct {
+	ID    string
+	RunID string
+}
+
+// ActivityType identifies an activity type with both human-readable name and technical path information.
+// This structure provides metadata about activity functions across different workflow engines.
+type ActivityType struct {
+	// Name is the human-readable identifier for the activity type.
+	// This is the name used when scheduling activity executions and in activity registration.
+	// Example: "ProcessPayment", "send-email", "validate-input", etc.
+	Name string
+
+	// Path contains the fully qualified path or package information for the activity function.
+	// This provides technical details about where the activity code is located.
+	// In Cadence: typically includes the full package path
+	// In Temporal: may not always be available (often empty)
+	// Example: "github.com/myorg/activities.ProcessPayment"
+	Path string
+}

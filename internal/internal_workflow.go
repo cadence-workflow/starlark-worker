@@ -11,6 +11,7 @@ import (
 type Workflow interface {
 	GetLogger(ctx Context) *zap.Logger
 	GetActivityLogger(ctx context.Context) *zap.Logger
+	GetActivityInfo(ctx context.Context) ActivityInfo
 	WithValue(parent Context, key interface{}, val interface{}) Context
 	NewDisconnectedContext(parent Context) (ctx Context, cancel func())
 	GetMetricsScope(ctx Context) interface{}
