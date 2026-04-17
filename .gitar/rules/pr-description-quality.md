@@ -40,7 +40,6 @@ From https://cbea.ms/git-commit/#why-not-how:
    - Concrete, copyable commands with exact invocations
    - ✅ GOOD: `go test -v ./plugin/hashlib/... -run TestHashlib`
    - ❌ BAD: "Tested locally" or "See tests/foo_test.go"
-   - For integration tests: setup steps + commands
    - For integration tests: include Cadence setup steps + commands
 
 4. **Potential risks**
