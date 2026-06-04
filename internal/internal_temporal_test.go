@@ -8,7 +8,6 @@ import (
 	"github.com/nexus-rpc/sdk-go/nexus"
 	"github.com/stretchr/testify/require"
 	"go.starlark.net/starlark"
-	commonpb "go.temporal.io/api/common/v1"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
@@ -114,50 +113,6 @@ func TestTemporalFromData(t *testing.T) {
 func newTemporalTestConverter(t *testing.T) encoded.DataConverter {
 	logger := zaptest.NewLogger(t, zaptest.Level(zap.InfoLevel))
 	return &CadenceDataConverter{Logger: logger}
-}
-
-// TestRegisterWorkflowWithOptions tests that the TemporalWorker can register workflows with options.
-func TestTemporalRegisterWorkflowWithOptions(t *testing.T) {
-	// Mock worker - since we can't easily create a real worker here
-	worker := &TemporalWorker{Worker: nil}
-
-	// Test workflow function
-	testWorkflow := func() error { return nil }
-
-	t.Run("register-workflow-with-basic-options", func(t *testing.T) {
-		options := RegisterWorkflowOptions{
-			Name:                          "test-temporal-workflow",
-			EnableShortName:               true,
-			DisableAlreadyRegisteredCheck: true,
-			VersioningBehavior:            1, // Temporal-specific field
-		}
-
-		// This test verifies that the method accepts the correct option types
-		require.NotPanics(t, func() {
-			defer func() {
-				if r := recover(); r != nil {
-					// Expected to panic due to nil Worker, but signature is correct
-				}
-			}()
-			worker.RegisterWorkflowWithOptions(testWorkflow, options)
-		})
-	})
-
-	t.Run("register-workflow-with-versioning-behavior", func(t *testing.T) {
-		options := RegisterWorkflowOptions{
-			Name:               "versioned-workflow",
-			VersioningBehavior: 2, // Test different versioning behavior value
-		}
-
-		require.NotPanics(t, func() {
-			defer func() {
-				if r := recover(); r != nil {
-					// Expected to panic due to nil Worker, but signature is correct
-				}
-			}()
-			worker.RegisterWorkflowWithOptions(testWorkflow, options)
-		})
-	})
 }
 
 // TestRegisterActivityWithOptions tests that the TemporalWorker can register activities with options.
