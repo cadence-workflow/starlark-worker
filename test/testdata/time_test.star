@@ -20,6 +20,10 @@ def effective_time_test():
     t.equal("unix:1753361232", os.environ["STARLARK_TIME"])
     t.equal(float(1753361232), time.time())
 
+    # force_system_time should ignore STARLARK_TIME and return the actual system time.
+    t.true(time.time(force_system_time=True) > float(1753361232))
+
+    # sleep for a few seconds and check that time.time() reflects the passage of time, even with STARLARK_TIME set.
     sleep_seconds = 5
     time.sleep(seconds = sleep_seconds)
     t.equal(float(1753361232 + sleep_seconds), time.time())

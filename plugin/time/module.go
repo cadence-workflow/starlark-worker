@@ -2,9 +2,10 @@ package time
 
 import (
 	"fmt"
-	"github.com/cadence-workflow/starlark-worker/workflow"
 	"strings"
 	"time"
+
+	"github.com/cadence-workflow/starlark-worker/workflow"
 
 	"github.com/cadence-workflow/starlark-worker/ext"
 	"github.com/cadence-workflow/starlark-worker/service"
@@ -76,17 +77,31 @@ func (m *Module) _sleep(t *starlark.Thread, fn *starlark.Builtin, args starlark.
 }
 
 // _time_ns is similar to _time but returns time as an integer number of nanoseconds since the epoch.
+// Parameters:
+//   - force_system_time (optional): if true, ignores the STARLARK_TIME environment variable and returns the actual system time.
+//
 // Returns: int
-func (m *Module) _time_ns(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
-	ns := m.getEffectiveTime(t).UnixNano()
+func (m *Module) _time_ns(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var forceSystemTime bool
+	if err := starlark.UnpackArgs("time_ns", args, kwargs, "force_system_time?", &forceSystemTime); err != nil {
+		return nil, err
+	}
+	ns := m.getEffectiveTime(t, forceSystemTime).UnixNano()
 	return starlark.MakeInt64(ns), nil
 }
 
 // _time returns the current unix time in seconds as floating point number.
 // Use _time_ns to avoid the precision loss caused by the float type.
+// Parameters:
+//   - force_system_time (optional): if true, ignores the STARLARK_TIME environment variable and returns the actual system time.
+//
 // Returns: float
-func (m *Module) _time(t *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
-	ns := m.getEffectiveTime(t).UnixNano()
+func (m *Module) _time(t *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var forceSystemTime bool
+	if err := starlark.UnpackArgs("time", args, kwargs, "force_system_time?", &forceSystemTime); err != nil {
+		return nil, err
+	}
+	ns := m.getEffectiveTime(t, forceSystemTime).UnixNano()
 	sec := float64(ns) / 1e9
 	return starlark.Float(sec), nil
 }
@@ -123,7 +138,11 @@ func (m *Module) _utc_format_seconds(t *starlark.Thread, _ *starlark.Builtin, ar
 
 // getEffectiveTime returns the current time, taking into account the delta duration, which is non-zero,
 // if the time is altered via the service.STARLARK_TIME environment variable.
-func (m *Module) getEffectiveTime(t *starlark.Thread) time.Time {
+func (m *Module) getEffectiveTime(t *starlark.Thread, forceSystemTime bool) time.Time {
 	ctx := service.GetContext(t)
-	return workflow.Now(ctx).Add(m.delta)
+	systemTime := workflow.Now(ctx)
+	if forceSystemTime {
+		return systemTime
+	}
+	return systemTime.Add(m.delta)
 }

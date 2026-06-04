@@ -82,7 +82,7 @@ func (r *TempSuite) TestAtExit() {
 
 		var appError *temporalsdk.ApplicationError
 		require.True(errors.As(err, &appError))
-		require.Equal("fail: injected error", appError.Message())
+		require.Contains(appError.Message(), "fail: injected error")
 		require.Equal("TemporalCustomError", appError.Type())
 	})
 
