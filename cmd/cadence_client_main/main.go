@@ -62,7 +62,7 @@ func main() {
 	}
 	arg1 := os.Args[1]
 	if arg1 == "--help" || arg1 == "-h" {
-		log.Printf(_help)
+		log.Print(_help)
 		return
 	}
 	target := targets[arg1]
