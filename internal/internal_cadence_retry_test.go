@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -70,16 +71,31 @@ func TestCadenceRetryPolicyJitterPassthrough(t *testing.T) {
 	})
 
 	t.Run("WithChildOptions", func(t *testing.T) {
+		const initialInterval = 10 * time.Minute
+		var starts []time.Time
+
 		s := &testsuite.WorkflowTestSuite{}
 		env := s.NewTestWorkflowEnvironment()
-		child := func(ctx cad.Context) (string, error) { return "ok", nil }
+		child := func(ctx cad.Context) (string, error) {
+			starts = append(starts, cad.Now(ctx))
+			if cad.GetInfo(ctx).Attempt == 0 {
+				return "", errors.New("fail first attempt")
+			}
+			return "ok", nil
+		}
 		env.RegisterWorkflowWithOptions(child, cad.RegisterOptions{Name: "child"})
 		env.ExecuteWorkflow(func(ctx cad.Context) (string, error) {
-			p := fullRetryPolicy()
 			ctx = w.WithChildOptions(ctx, ChildWorkflowOptions{
 				ExecutionStartToCloseTimeout: time.Minute,
 				TaskStartToCloseTimeout:      10 * time.Second,
-				RetryPolicy:                  &p,
+				RetryPolicy: &RetryPolicy{
+					InitialInterval:    initialInterval,
+					BackoffCoefficient: 2,
+					JitterCoefficient:  0.99,
+					MaximumInterval:    time.Hour,
+					ExpirationInterval: 24 * time.Hour,
+					MaximumAttempts:    3,
+				},
 			}).(cad.Context)
 			var res string
 			err := cad.ExecuteChildWorkflow(ctx, "child").Get(ctx, &res)
@@ -90,5 +106,10 @@ func TestCadenceRetryPolicyJitterPassthrough(t *testing.T) {
 		var res string
 		require.NoError(t, env.GetWorkflowResult(&res))
 		require.Equal(t, "ok", res)
+
+		require.Len(t, starts, 2)
+		backoff := starts[1].Sub(starts[0])
+		require.Greater(t, backoff, time.Duration(0))
+		require.Less(t, backoff, initialInterval, "retry backoff was not jittered; JitterCoefficient not passed to child options")
 	})
 }
