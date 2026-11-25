@@ -102,6 +102,7 @@ type RetryPolicy struct {
 	// Coefficient for proportional jitter, used to spread retries out. Must be between 0 and 1.
 	// Each retry interval is multiplied by a random factor in (1 - JitterCoefficient, 1], applied after
 	// MaximumInterval is enforced. Default is 0 (no jitter). Values within [0, 0.2] are recommended.
+	// Not supported on the Temporal backend.
 	JitterCoefficient float64
 
 	// Maximum backoff interval between retries. Exponential backoff leads to interval increase.
