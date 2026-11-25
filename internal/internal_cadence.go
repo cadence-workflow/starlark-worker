@@ -323,6 +323,7 @@ func (w *CadenceWorkflow) WithActivityOptions(ctx Context, options ActivityOptio
 		cadOptions.RetryPolicy = &cad.RetryPolicy{
 			InitialInterval:          options.RetryPolicy.InitialInterval,
 			BackoffCoefficient:       options.RetryPolicy.BackoffCoefficient,
+			JitterCoefficient:        options.RetryPolicy.JitterCoefficient,
 			MaximumInterval:          options.RetryPolicy.MaximumInterval,
 			ExpirationInterval:       options.RetryPolicy.ExpirationInterval,
 			MaximumAttempts:          options.RetryPolicy.MaximumAttempts,
@@ -349,6 +350,7 @@ func (w CadenceWorkflow) WithChildOptions(ctx Context, cwo ChildWorkflowOptions)
 		cadOptions.RetryPolicy = &cad.RetryPolicy{
 			InitialInterval:          cwo.RetryPolicy.InitialInterval,
 			BackoffCoefficient:       cwo.RetryPolicy.BackoffCoefficient,
+			JitterCoefficient:        cwo.RetryPolicy.JitterCoefficient,
 			MaximumInterval:          cwo.RetryPolicy.MaximumInterval,
 			ExpirationInterval:       cwo.RetryPolicy.ExpirationInterval,
 			MaximumAttempts:          cwo.RetryPolicy.MaximumAttempts,
@@ -363,6 +365,7 @@ func (w CadenceWorkflow) WithRetryPolicy(ctx Context, retryPolicy RetryPolicy) C
 	cadRetryPolicy := cad.RetryPolicy{
 		InitialInterval:          retryPolicy.InitialInterval,
 		BackoffCoefficient:       retryPolicy.BackoffCoefficient,
+		JitterCoefficient:        retryPolicy.JitterCoefficient,
 		MaximumInterval:          retryPolicy.MaximumInterval,
 		ExpirationInterval:       retryPolicy.ExpirationInterval,
 		MaximumAttempts:          retryPolicy.MaximumAttempts,
