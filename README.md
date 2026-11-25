@@ -1,4 +1,5 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/cadence-workflow/starlark-worker.svg)](https://pkg.go.dev/github.com/cadence-workflow/starlark-worker)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fcadence-workflow%2Fstarlark-worker.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fcadence-workflow%2Fstarlark-worker?ref=badge_shield)
 
 Starlark ⭐ meets Cadence ⚙️
 
@@ -46,3 +47,7 @@ This section is intended for contributors. Below are the instructions for settin
 We'd love to have you contribute! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for more information. For general guidance on contributing to Cadence projects, check out our [Contributing Guide](https://github.com/cadence-workflow/cadence/blob/master/CONTRIBUTING.md).
 
 Join us on [CNCF Slack](https://communityinviter.com/apps/cloud-native/cncf) to discuss and ask questions.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fcadence-workflow%2Fstarlark-worker.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fcadence-workflow%2Fstarlark-worker?ref=badge_large)
